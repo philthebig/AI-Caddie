@@ -1,65 +1,130 @@
-import Image from "next/image";
+import { prisma } from "@/lib/db";
+import { currentUser } from "@clerk/nextjs/server";
+import AddRoundForm from '@/components/AddRoundForm';
+import AICoachButton from '@/components/AICoachButton';
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+export default async function Home() {
+  // 1. Get the current logged-in user from Clerk
+  const user = await currentUser();
+
+  // If not logged in, the Middleware should catch this, but just in case:
+  if (!user) return <div>Please Sign In</div>;
+
+  // 2. Fetch ONLY this user's data from our Postgres database
+  const dbUser = await prisma.user.findUnique({
+    where: { email: user.emailAddresses[0].emailAddress },
+    include: {
+      rounds: {
+        orderBy: { date: 'desc' } // Show newest rounds at the top
+      }
+    }
+  });
+
+  // 3. Handle "First Time User" (User is in Clerk, but not in our DB yet)
+  if (!dbUser) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-extrabold tracking-tight mb-4 text-emerald-800">
+            Welcome, {user.firstName}! ⛳️
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-slate-600 mb-8 text-lg">
+            This is your personal AI Caddie. Log your first round below to initialize your dashboard.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          
+          {/* This form submission will automatically create the user in the DB */}
+          <AddRoundForm />
         </div>
       </main>
-    </div>
+    );
+  }
+
+  // 4. Main Dashboard View
+  return (
+    <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-emerald-800">
+              {dbUser.name}'s Dashboard
+            </h1>
+            <p className="text-slate-500 mt-2">
+              Tracking {dbUser.rounds.length} rounds
+            </p>
+          </div>
+        </div>
+
+        {/* Input Form */}
+        <AddRoundForm />
+
+        {/* Rounds Grid */}
+        <div className="grid gap-6 mt-8">
+          {dbUser.rounds.length === 0 ? (
+            <div className="text-center p-12 bg-white rounded-xl border border-dashed border-slate-300">
+              <p className="text-slate-500">No rounds logged yet. Go play some golf! 🏌️‍♂️</p>
+            </div>
+          ) : (
+            dbUser.rounds.map((round) => (
+              <div key={round.id} className="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-lg transition-shadow">
+                
+                {/* Round Header */}
+                <div className="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
+                  <div>
+                    <h3 className="font-bold text-xl text-slate-800">{round.courseName}</h3>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
+                      {new Date(round.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-3xl font-black text-emerald-700">{round.totalScore}</span>
+                    <span className="text-xs text-slate-400 font-medium">TOTAL</span>
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-4 gap-4 text-sm mb-6">
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-slate-400 text-xs font-bold uppercase mb-1">Fairways</div>
+                    <div className="font-bold text-slate-700">{round.fairwaysHit}</div>
+                  </div>
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-slate-400 text-xs font-bold uppercase mb-1">GIR</div>
+                    <div className="font-bold text-slate-700">{round.greensInReg}</div>
+                  </div>
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-slate-400 text-xs font-bold uppercase mb-1">Putts</div>
+                    <div className="font-bold text-slate-700">{round.totalPutts}</div>
+                  </div>
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <div className="text-slate-400 text-xs font-bold uppercase mb-1">Penalties</div>
+                    <div className="font-bold text-slate-700">{round.penaltyStrokes}</div>
+                  </div>
+                </div>
+
+                {/* AI Section */}
+                <div className="pt-4 border-t border-slate-100">
+                  {round.aiFeedback ? (
+                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg">
+                      <h4 className="font-bold text-indigo-900 text-sm mb-2 flex items-center gap-2">
+                        <span>🤖</span> AI Coach Analysis
+                      </h4>
+                      <p className="text-indigo-800 text-sm leading-relaxed">
+                        {round.aiFeedback}
+                      </p>
+                    </div>
+                  ) : (
+                    <AICoachButton roundId={round.id} />
+                  )}
+                </div>
+
+              </div>
+            ))
+          )}
+        </div>
+
+      </div>
+    </main>
   );
 }

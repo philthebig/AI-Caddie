@@ -1,0 +1,39 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// This is your User table
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  rounds    Round[]  // A user can have many golf rounds
+  createdAt DateTime @default(now())
+}
+
+// This is your Golf Round table
+model Round {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  // Phase 1 MVP Core Metrics
+  courseName    String
+  totalScore    Int
+  fairwaysHit   Int
+  greensInReg   Int
+  totalPutts    Int
+  penaltyStrokes Int     @default(0)
+  aiFeedback    String?  @db.Text
+  date          DateTime @default(now())
+}

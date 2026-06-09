@@ -62,7 +62,7 @@ flowchart LR
 
 ---
 
-## Phase 6a — Live play mode (start here) ⬜
+## Phase 6a — Live play mode (start here) ✅
 
 **Goal:** Start a round on the course, enter scores hole-by-hole, save after each hole, finish when done.
 
@@ -125,13 +125,13 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 ### Acceptance criteria
 
-- [ ] User selects course + tee, taps “Start round on course”, lands on `/play/[roundId]`.
-- [ ] Entering hole 1 data and tapping Next persists to DB (verify in Prisma / round detail).
-- [ ] Refreshing `/play/[roundId]` restores current hole and saved data.
-- [ ] Dashboard shows “Resume round” for in-progress round.
-- [ ] “Finish round” sets `COMPLETED`; round appears in recent rounds with correct totals.
-- [ ] Post-round `AddRoundForm` flow still works unchanged.
-- [ ] Unauthorized users cannot access another user’s play session.
+- [x] User selects course + tee, taps “Start round on course”, lands on `/play/[roundId]`.
+- [x] Entering hole 1 data and tapping Next persists to DB (verify in Prisma / round detail).
+- [x] Refreshing `/play/[roundId]` restores current hole and saved data.
+- [x] Dashboard shows “Resume round” for in-progress round.
+- [x] “Finish round” sets `COMPLETED`; round appears in recent rounds with correct totals.
+- [x] Post-round `AddRoundForm` flow still works unchanged.
+- [x] Unauthorized users cannot access another user’s play session.
 
 ### Out of scope for 6a
 
@@ -386,7 +386,7 @@ model CourseGpsCache {
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 6a | Live play mode | ⬜ |
+| 6a | Live play mode | ✅ |
 | 6b | Play UI polish | ⬜ |
 | 6c | GPS + distance display | ⬜ |
 | 6d | Map view | ⬜ |

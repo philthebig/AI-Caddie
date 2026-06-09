@@ -1,14 +1,14 @@
 'use client'
 
 import { createRound, updateRound } from '@/app/actions'
+import { startRound } from '@/app/actions/play'
 import CourseSearch, { type CourseSearchSelection } from '@/components/CourseSearch'
 import HoleNavBar from '@/components/HoleNavBar'
 import HolePicker from '@/components/HolePicker'
+import HoleScoreCard from '@/components/HoleScoreCard'
 import ToggleGroup from '@/components/ToggleGroup'
 import {
-  APP_MISS_DIRECTIONS,
   emptyHole,
-  OTT_MISS_DIRECTIONS,
   type CreateRoundErrorDetails,
   type HoleCount,
   type HoleInput,
@@ -20,26 +20,6 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 const DEFAULT_PARS_18 = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4]
-
-function ToggleYesNo({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: boolean
-  onChange: (value: boolean) => void
-}) {
-  return (
-    <ToggleGroup
-      label={label}
-      options={['YES', 'NO'] as const}
-      value={value ? 'YES' : 'NO'}
-      onChange={(v) => onChange(v === 'YES')}
-      labels={{ YES: 'Yes', NO: 'No' }}
-    />
-  )
-}
 
 type AddRoundFormProps = {
   edit?: RoundFormEditData
@@ -74,6 +54,7 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [startingPlay, setStartingPlay] = useState(false)
 
   function applySubmitErrors(message: string, details?: CreateRoundErrorDetails) {
     const fromDetails = [
@@ -206,6 +187,48 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     setPickerOpen(false)
   }
 
+  function buildRoundFormData() {
+    const formData = new FormData()
+    const payload = activeHoles.map((h) => ({
+      ...h,
+      appMissDirection: h.gir ? null : (h.appMissDirection ?? 'SHORT'),
+      ottMissDirection: (h.par ?? 4) === 3 ? null : (h.ottMissDirection ?? 'HIT'),
+    }))
+    formData.set('holesJson', JSON.stringify(payload))
+    formData.set('coursePar', String(coursePar))
+    formData.set('courseName', courseName)
+    formData.set('holeCount', String(holeCount))
+    if (externalCourseId != null) {
+      formData.set('externalCourseId', String(externalCourseId))
+    }
+    if (teeName) {
+      formData.set('teeName', teeName)
+    }
+    return formData
+  }
+
+  async function handleStartOnCourse() {
+    if (!canStartEntry) return
+    if (!hasRealCourse) {
+      initHoles(holeCount)
+    }
+    setStartingPlay(true)
+    setError(null)
+    setFieldErrors([])
+
+    const result = await startRound(buildRoundFormData())
+    setStartingPlay(false)
+
+    if (result?.error) {
+      setError(result.error)
+      return
+    }
+
+    if (result?.roundId) {
+      router.push(`/play/${result.roundId}`)
+    }
+  }
+
   async function handleSubmit(formData: FormData) {
     setSubmitting(true)
     setError(null)
@@ -262,7 +285,6 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
   }
 
   const hole = activeHoles[currentHole]
-  const isPar3 = (hole?.par ?? 4) === 3
   const canStartEntry = courseName.trim().length > 0 && (hasRealCourse || !appliedSelection)
 
   return (
@@ -408,19 +430,29 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
               </button>
             )}
 
-            <button
-              type="button"
-              disabled={!canStartEntry}
-              onClick={() => {
-                if (!hasRealCourse) {
-                  initHoles(holeCount)
-                }
-                setStep('holes')
-              }}
-              className="w-full rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 disabled:opacity-50 touch-manipulation"
-            >
-              Start hole-by-hole entry →
-            </button>
+            <div className="space-y-3">
+              <button
+                type="button"
+                disabled={!canStartEntry || startingPlay}
+                onClick={handleStartOnCourse}
+                className="w-full rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 disabled:opacity-50 touch-manipulation"
+              >
+                {startingPlay ? 'Starting…' : 'Start round on course →'}
+              </button>
+              <button
+                type="button"
+                disabled={!canStartEntry}
+                onClick={() => {
+                  if (!hasRealCourse) {
+                    initHoles(holeCount)
+                  }
+                  setStep('holes')
+                }}
+                className="w-full rounded-xl border border-slate-300 py-3.5 min-h-12 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 touch-manipulation"
+              >
+                Log round after the fact →
+              </button>
+            </div>
           </div>
         )}
 
@@ -454,142 +486,10 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Score</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={15}
-                  value={hole.score}
-                  onChange={(e) => updateHole(currentHole, { score: Number(e.target.value) })}
-                  className="w-full rounded-md border border-slate-300 p-3 text-lg font-bold"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Putts</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={hole.putts}
-                  onChange={(e) => updateHole(currentHole, { putts: Number(e.target.value) })}
-                  className="w-full rounded-md border border-slate-300 p-3 text-lg font-bold"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Penalty strokes</label>
-              <input
-                type="number"
-                min={0}
-                max={5}
-                value={hole.penaltyStrokes}
-                onChange={(e) => updateHole(currentHole, { penaltyStrokes: Number(e.target.value) })}
-                className="w-full rounded-md border border-slate-300 p-3"
-              />
-            </div>
-
-            {!isPar3 && (
-              <div className="rounded-lg border border-slate-200 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 mb-3">
-                  Off the Tee (OTT)
-                </p>
-                <ToggleGroup
-                  label="Driving result"
-                  options={OTT_MISS_DIRECTIONS}
-                  value={hole.ottMissDirection ?? 'HIT'}
-                  onChange={(v) => updateHole(currentHole, { ottMissDirection: v })}
-                  labels={{ LEFT: 'Left', HIT: 'Fairway', RIGHT: 'Right' }}
-                />
-              </div>
-            )}
-
-            <div className="rounded-lg border border-slate-200 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 mb-3">
-                Approach (APP)
-              </p>
-              <ToggleYesNo
-                label="Green in regulation"
-                value={hole.gir}
-                onChange={(gir) => updateHole(currentHole, { gir })}
-              />
-              {!hole.gir && (
-                <div className="mt-4 space-y-4">
-                  <ToggleGroup
-                    label="Miss direction"
-                    options={APP_MISS_DIRECTIONS}
-                    value={hole.appMissDirection ?? 'SHORT'}
-                    onChange={(v) => updateHole(currentHole, { appMissDirection: v })}
-                    labels={{ LEFT: 'Left', RIGHT: 'Right', SHORT: 'Short', LONG: 'Long' }}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Approach proximity (feet from pin)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={200}
-                      placeholder="e.g. 25"
-                      value={hole.approachProximity ?? ''}
-                      onChange={(e) =>
-                        updateHole(currentHole, {
-                          approachProximity: e.target.value ? Number(e.target.value) : null,
-                        })
-                      }
-                      className="w-full rounded-md border border-slate-300 p-3"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {!hole.gir && (
-              <div className="rounded-lg border border-slate-200 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 mb-3">
-                  Around the Green (ARG)
-                </p>
-                <ToggleYesNo
-                  label="Up-and-down attempt"
-                  value={hole.upAndDownAttempt ?? false}
-                  onChange={(v) =>
-                    updateHole(currentHole, {
-                      upAndDownAttempt: v,
-                      upAndDownSuccess: v ? hole.upAndDownSuccess : null,
-                    })
-                  }
-                />
-                {hole.upAndDownAttempt && (
-                  <div className="mt-4 space-y-4">
-                    <ToggleYesNo
-                      label="Saved par / up-and-down"
-                      value={hole.upAndDownSuccess ?? false}
-                      onChange={(v) => updateHole(currentHole, { upAndDownSuccess: v })}
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Chip proximity (feet)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        placeholder="e.g. 8"
-                        value={hole.argProximity ?? ''}
-                        onChange={(e) =>
-                          updateHole(currentHole, {
-                            argProximity: e.target.value ? Number(e.target.value) : null,
-                          })
-                        }
-                        className="w-full rounded-md border border-slate-300 p-3"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <HoleScoreCard
+              hole={hole}
+              onUpdate={(patch) => updateHole(currentHole, patch)}
+            />
 
             {!isEdit && (
               <button

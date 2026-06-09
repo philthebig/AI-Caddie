@@ -22,6 +22,11 @@ enum AppMissDirection {
   LONG
 }
 
+enum RoundStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -50,6 +55,7 @@ model Round {
 
   aiFeedback     String?  @db.Text
   date           DateTime @default(now())
+  status         RoundStatus @default(COMPLETED)
   holes          Hole[]
 }
 

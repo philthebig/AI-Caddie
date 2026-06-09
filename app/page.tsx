@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { currentUser } from '@clerk/nextjs/server'
 import AddRoundForm from '@/components/AddRoundForm'
 import EmptyState from '@/components/EmptyState'
+import ResumeRoundBanner from '@/components/ResumeRoundBanner'
 import RoundCard from '@/components/RoundCard'
 import TrendsChart from '@/components/TrendsChart'
 import { buildTrendSeries, computeTrendPoints } from '@/lib/golf-logic/trends'
@@ -38,7 +39,9 @@ export default async function Home() {
     )
   }
 
-  const trendPoints = computeTrendPoints(dbUser.rounds)
+  const inProgressRound = dbUser.rounds.find((r) => r.status === 'IN_PROGRESS')
+  const completedRounds = dbUser.rounds.filter((r) => r.status === 'COMPLETED')
+  const trendPoints = computeTrendPoints(completedRounds)
   const trendSeries = buildTrendSeries(trendPoints)
 
   return (
@@ -49,19 +52,21 @@ export default async function Home() {
             {dbUser.name ? `${dbUser.name}'s Dashboard` : 'Your Dashboard'}
           </h1>
           <p className="text-slate-500 mt-1 text-sm">
-            {dbUser.rounds.length === 0
+            {completedRounds.length === 0
               ? 'No rounds yet'
-              : `${dbUser.rounds.length} round${dbUser.rounds.length === 1 ? '' : 's'} logged`}
+              : `${completedRounds.length} round${completedRounds.length === 1 ? '' : 's'} logged`}
           </p>
         </header>
 
-        {dbUser.rounds.length >= 1 && <TrendsChart series={trendSeries} />}
+        {inProgressRound && <ResumeRoundBanner round={inProgressRound} />}
+
+        {completedRounds.length >= 1 && <TrendsChart series={trendSeries} />}
 
         <AddRoundForm />
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-800">Recent rounds</h2>
-          {dbUser.rounds.length === 0 ? (
+          {completedRounds.length === 0 ? (
             <EmptyState
               icon="🏌️‍♂️"
               title="No rounds yet"
@@ -69,7 +74,7 @@ export default async function Home() {
             />
           ) : (
             <div className="grid gap-3">
-              {dbUser.rounds.map((round) => (
+              {completedRounds.map((round) => (
                 <RoundCard key={round.id} round={round} />
               ))}
             </div>

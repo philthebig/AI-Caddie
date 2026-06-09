@@ -24,6 +24,45 @@ export const holeInputSchema = z.object({
   argProximity: z.number().int().min(0).max(100).nullable().optional(),
 })
 
+type HoleInputLike = z.infer<typeof holeInputSchema>
+
+function refineHoleInput(hole: HoleInputLike, ctx: z.RefinementCtx, pathPrefix: (string | number)[] = []) {
+  const par = hole.par ?? 4
+  const isPar3 = par === 3
+
+  if (isPar3 && hole.ottMissDirection != null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `Hole ${hole.holeNumber}: OTT miss not applicable on par 3`,
+      path: pathPrefix,
+    })
+  }
+
+  if (!isPar3 && hole.ottMissDirection == null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `Hole ${hole.holeNumber}: OTT result required on par ${par}`,
+      path: pathPrefix,
+    })
+  }
+
+  if (!hole.gir && hole.appMissDirection == null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `Hole ${hole.holeNumber}: approach miss direction required when GIR missed`,
+      path: pathPrefix,
+    })
+  }
+
+  if (hole.gir && hole.appMissDirection != null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `Hole ${hole.holeNumber}: approach miss direction only when GIR missed`,
+      path: pathPrefix,
+    })
+  }
+}
+
 export const createRoundSchema = z
   .object({
     courseName: z.string().min(1),
@@ -55,42 +94,13 @@ export const createRoundSchema = z
     }
 
     for (const hole of data.holes) {
-      const par = hole.par ?? 4
-      const isPar3 = par === 3
-
-      if (isPar3 && hole.ottMissDirection != null) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Hole ${hole.holeNumber}: OTT miss not applicable on par 3`,
-          path: ['holes'],
-        })
-      }
-
-      if (!isPar3 && hole.ottMissDirection == null) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Hole ${hole.holeNumber}: OTT result required on par ${par}`,
-          path: ['holes'],
-        })
-      }
-
-      if (!hole.gir && hole.appMissDirection == null) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Hole ${hole.holeNumber}: approach miss direction required when GIR missed`,
-          path: ['holes'],
-        })
-      }
-
-      if (hole.gir && hole.appMissDirection != null) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Hole ${hole.holeNumber}: approach miss direction only when GIR missed`,
-          path: ['holes'],
-        })
-      }
+      refineHoleInput(hole, ctx, ['holes'])
     }
   })
+
+export const saveHoleSchema = holeInputSchema.superRefine((hole, ctx) => {
+  refineHoleInput(hole, ctx)
+})
 
 export type HoleInput = z.infer<typeof holeInputSchema>
 export type CreateRoundInput = z.infer<typeof createRoundSchema>

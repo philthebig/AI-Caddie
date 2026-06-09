@@ -87,6 +87,25 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 
 ---
 
+## Phase 6 — On-course play ⬜
+
+**Goal:** Play hole-by-hole on the course with live scoring, map view, and distance.
+
+**Full spec:** [`docs/ON_COURSE_PLAY.md`](./ON_COURSE_PLAY.md) — implementation details, file plan, acceptance criteria, and agent handoff prompts. **Implement one sub-phase at a time.**
+
+| Sub-phase | Goal | Status | Notes |
+|-----------|------|--------|-------|
+| 6a | Live play mode | ⬜ | `IN_PROGRESS` rounds, `/play/[id]`, `saveHole` per hole — **start here** |
+| 6b | Play UI polish | ⬜ | Running totals, full-screen layout, auto-advance |
+| 6c | GPS + distance | ⬜ | `useGeolocation`, yardage + rough GPS readout |
+| 6d | Map view | ⬜ | Leaflet or Mapbox on play screen |
+| 6e | Offline sync | ⬜ | IndexedDB queue for spotty cell |
+| 6f | Hole-level GPS | ⬜ | Paid provider (iGolf, etc.) for true green distance |
+
+**Agent prompt (6a):** *Read `docs/ON_COURSE_PLAY.md` and implement Phase 6a only.*
+
+---
+
 ## Future — Shot-level data ⬜
 
 **Goal:** Tour-grade strokes gained when capture supports it.
@@ -108,4 +127,7 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 | `lib/golf-logic/aggregate.ts` | Aggregates + AI text formatting |
 | `lib/auth.ts` | Clerk → DB user resolution |
 | `app/api/coach/route.ts` | Streaming AI coach |
+| `components/AddRoundForm.tsx` | Post-round + hole-by-hole entry (reuse for play UI) |
+| `components/HoleNavBar.tsx` | On-course hole navigation |
+| `docs/ON_COURSE_PLAY.md` | On-course play implementation plan (Phase 6) |
 | `docs/ROADMAP.md` | This file |

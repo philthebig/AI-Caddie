@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,28 +9,72 @@ datasource db {
   provider = "postgresql"
 }
 
-// This is your User table
+enum OttMissDirection {
+  LEFT
+  HIT
+  RIGHT
+}
+
+enum AppMissDirection {
+  LEFT
+  RIGHT
+  SHORT
+  LONG
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
-  rounds    Round[]  // A user can have many golf rounds
+  rounds    Round[]
   createdAt DateTime @default(now())
 }
 
-// This is your Golf Round table
 model Round {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  
-  // Phase 1 MVP Core Metrics
-  courseName    String
-  totalScore    Int
-  fairwaysHit   Int
-  greensInReg   Int
-  totalPutts    Int
-  penaltyStrokes Int     @default(0)
-  aiFeedback    String?  @db.Text
-  date          DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+
+  courseName     String
+  holeCount      Int      @default(18)
+  coursePar      Int?
+
+  // Aggregates (computed from holes on save; kept for dashboard + legacy rounds)
+  totalScore     Int
+  fairwaysHit    Int
+  greensInReg    Int
+  totalPutts     Int
+  penaltyStrokes Int      @default(0)
+
+  aiFeedback     String?  @db.Text
+  date           DateTime @default(now())
+  holes          Hole[]
+}
+
+model Hole {
+  id                String            @id @default(cuid())
+  roundId           String
+  round             Round             @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  holeNumber        Int
+  par               Int?
+  yardage           Int?
+  score             Int
+  putts             Int
+  penaltyStrokes    Int               @default(0)
+
+  // Off-the-Tee (par 4/5 only; null on par 3)
+  ottMissDirection  OttMissDirection?
+
+  // Approach
+  gir               Boolean
+  appMissDirection  AppMissDirection?
+  approachProximity Int?
+
+  // Around-the-Green (when GIR missed)
+  upAndDownAttempt  Boolean?
+  upAndDownSuccess  Boolean?
+  argProximity      Int?
+
+  @@unique([roundId, holeNumber])
 }

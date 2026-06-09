@@ -1,0 +1,16 @@
+---
+description: Coding standards for Next.js App Router, React Server Components, and client interactivity
+globs: src/app/**/*
+alwaysApply: true
+---
+
+# Next.js App Router Architecture
+
+## Component Separation
+- **Default to Server Components:** All files in `src/app/` are Server Components by default. Fetch data directly in these components using async/await.
+- **Client Components:** Only add `'use use client'` at the absolute top of the file if the component requires state (`useState`, `useEffect`) or event listeners (e.g., score logging forms, dashboard charts). Keep client components leaf-nodes wherever possible.
+
+## Data Fetching & Routing
+- Use native Next.js `fetch` or direct Prisma queries inside Server Components.
+- Use Route Handlers (`app/api/.../route.ts`) exclusively for the AI Engine integration and post-round data submissions.
+- Always implement clean TypeScript interfaces for route request bodies and responses.

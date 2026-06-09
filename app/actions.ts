@@ -1,63 +1,93 @@
 'use server'
 
-import { z } from 'zod'
 import { prisma } from '@/lib/db'
+import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
+import { createRoundSchema } from '@/lib/types/golf'
+import { currentUser } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
-import { currentUser } from '@clerk/nextjs/server' // <--- New import
-
-const createRoundSchema = z.object({
-  courseName: z.string().min(1),
-  totalScore: z.coerce.number().min(50),
-  fairwaysHit: z.coerce.number().min(0),
-  greensInReg: z.coerce.number().min(0),
-  totalPutts: z.coerce.number().min(0),
-  penaltyStrokes: z.coerce.number().min(0).default(0),
-})
 
 export async function createRound(formData: FormData) {
-  // 1. GET THE REAL USER
-  const user = await currentUser();
-  
+  const user = await currentUser()
+
   if (!user) {
-    return { error: "You must be logged in" }
+    return { error: 'You must be logged in' }
   }
 
-  // 2. CHECK IF USER EXISTS IN DB, IF NOT, CREATE THEM
-  // This "syncs" Clerk with your Postgres DB on the fly
   let dbUser = await prisma.user.findUnique({
-    where: { email: user.emailAddresses[0].emailAddress }
+    where: { email: user.emailAddresses[0].emailAddress },
   })
 
   if (!dbUser) {
     dbUser = await prisma.user.create({
       data: {
         email: user.emailAddresses[0].emailAddress,
-        name: `${user.firstName} ${user.lastName}`,
-        id: user.id // OPTIONAL: Use Clerk ID as database ID for simplicity
-      }
+        name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || null,
+        id: user.id,
+      },
     })
+  }
+
+  const holesJson = formData.get('holesJson')
+  if (typeof holesJson !== 'string') {
+    return { error: 'Missing hole data' }
+  }
+
+  let parsedHoles: unknown
+  try {
+    parsedHoles = JSON.parse(holesJson)
+  } catch {
+    return { error: 'Invalid hole data' }
   }
 
   const rawData = {
     courseName: formData.get('courseName'),
-    totalScore: formData.get('totalScore'),
-    fairwaysHit: formData.get('fairwaysHit'),
-    greensInReg: formData.get('greensInReg'),
-    totalPutts: formData.get('totalPutts'),
-    penaltyStrokes: formData.get('penaltyStrokes'),
+    holeCount: formData.get('holeCount'),
+    coursePar: formData.get('coursePar') || undefined,
+    holes: parsedHoles,
   }
 
   const result = createRoundSchema.safeParse(rawData)
 
   if (!result.success) {
-    return { error: "Invalid data" }
+    return { error: 'Invalid data', details: result.error.flatten() }
   }
 
-  await prisma.round.create({
-    data: {
-      userId: dbUser.id, // Now using the REAL user's ID
-      ...result.data,
-    },
+  const { courseName, holeCount, coursePar, holes } = result.data
+  const aggregates = computeRoundAggregates(holes, coursePar)
+
+  await prisma.$transaction(async (tx) => {
+    const round = await tx.round.create({
+      data: {
+        userId: dbUser!.id,
+        courseName,
+        holeCount,
+        coursePar: aggregates.coursePar,
+        totalScore: aggregates.totalScore,
+        fairwaysHit: aggregates.fairwaysHit,
+        greensInReg: aggregates.greensInReg,
+        totalPutts: aggregates.totalPutts,
+        penaltyStrokes: aggregates.penaltyStrokes,
+      },
+    })
+
+    await tx.hole.createMany({
+      data: holes.map((hole) => ({
+        roundId: round.id,
+        holeNumber: hole.holeNumber,
+        par: hole.par ?? null,
+        yardage: hole.yardage ?? null,
+        score: hole.score,
+        putts: hole.putts,
+        penaltyStrokes: hole.penaltyStrokes,
+        ottMissDirection: hole.ottMissDirection ?? null,
+        gir: hole.gir,
+        appMissDirection: hole.gir ? null : (hole.appMissDirection ?? null),
+        approachProximity: hole.gir ? null : (hole.approachProximity ?? null),
+        upAndDownAttempt: hole.gir ? null : (hole.upAndDownAttempt ?? null),
+        upAndDownSuccess: hole.gir ? null : (hole.upAndDownSuccess ?? null),
+        argProximity: hole.gir ? null : (hole.argProximity ?? null),
+      })),
+    })
   })
 
   revalidatePath('/')

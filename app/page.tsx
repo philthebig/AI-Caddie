@@ -15,8 +15,9 @@ export default async function Home() {
     where: { email: user.emailAddresses[0].emailAddress },
     include: {
       rounds: {
-        orderBy: { date: 'desc' } // Show newest rounds at the top
-      }
+        orderBy: { date: 'desc' },
+        include: { holes: { orderBy: { holeNumber: 'asc' } } },
+      },
     }
   });
 
@@ -75,6 +76,14 @@ export default async function Home() {
                     <h3 className="font-bold text-xl text-slate-800">{round.courseName}</h3>
                     <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
                       {new Date(round.date).toLocaleDateString()}
+                      {round.holes.length > 0 && (
+                        <span className="ml-2 text-emerald-600">
+                          · {round.holes.length} holes logged
+                        </span>
+                      )}
+                      {round.coursePar != null && (
+                        <span className="ml-1">· Par {round.coursePar}</span>
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-col items-end">

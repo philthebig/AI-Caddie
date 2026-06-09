@@ -1,0 +1,14 @@
+---
+description: Rules for database queries, Prisma ORM usage, and schema alignment
+globs: src/lib/db/**/*.ts, src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# Prisma & PostgreSQL Guardrails
+
+## Query Best Practices
+- Never execute raw SQL queries unless explicitly requested. Always use the Prisma Client instance (`prisma.round.create`, `prisma.playerProfile.findUnique`).
+- Use proper relation inclusions (`include: { holes: true }`) to avoid N+1 query problems when rendering data on the performance dashboard.
+
+## Transaction Safety
+- When logging a complete post-round dataset, use Prisma transactions (`prisma.$transaction([...])`) to ensure that if saving a specific hole fails, the entire round is rolled back to prevent orphaned database records.

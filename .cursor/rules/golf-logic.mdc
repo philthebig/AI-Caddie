@@ -1,0 +1,20 @@
+---
+description: Domain logic for golf metrics, Strokes Gained calculations, and strategic prompt engineering
+globs: src/app/api/caddie/**/*.ts, src/lib/golf-logic/**/*.ts
+alwaysApply: false
+---
+
+# Golf Domain & AI Caddie Logic Standards
+
+## Core Philosophy
+This app is built around the strategic depth of a scratch player. The AI Caddie must focus on **course management, dispersion patterns, and Strokes Gained analysis**, never superficial swing mechanics.
+
+## Terminology & Logic Constraints
+- **Miss Tendencies:** Always track directionality (Left, Right, Short, Long).
+- **Strokes Gained:** Categorize cleanly into Off-the-Tee (OTT), Approach (APP), Around-the-Green (ARG), and Putting (PUTT).
+- **Strategy:** Prioritize "smart targets" (center of the green, away from the dead-side of hazards) over "pin hunting."
+
+## Prompt Engineering Guardrails
+When generating backend prompts for the LLM Caddie Engine:
+- Instruct the LLM to analyze *patterns* across multiple rounds, not just single isolated bad holes.
+- Output format must always include a specific, data-backed insight followed by a tangible tactical drill (e.g., "Your right-side miss off the tee on holes over 400 yards is costing you 1.8 strokes. Target drill: Gate drill with driver...").

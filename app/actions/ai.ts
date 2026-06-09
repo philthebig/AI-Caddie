@@ -1,5 +1,6 @@
 'use server'
 
+import { formatRoundForAI } from '@/lib/golf-logic/aggregate'
 import { prisma } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import OpenAI from 'openai'
@@ -12,24 +13,24 @@ export async function generateFeedback(roundId: string) {
   // 1. Fetch the round details
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    include: { user: true }
+    include: { user: true, holes: { orderBy: { holeNumber: 'asc' } } },
   })
 
   if (!round) return { error: "Round not found" }
 
   // 2. The Prompt
-  const prompt = `
-    You are an elite golf caddie. Analyze this round for ${round.user.name}:
-    
-    Score: ${round.totalScore}
-    Fairways Hit: ${round.fairwaysHit}
-    Greens in Regulation: ${round.greensInReg}
-    Putts: ${round.totalPutts}
-    Penalties: ${round.penaltyStrokes}
+  const roundData = formatRoundForAI(round)
 
-    Identify the biggest weakness.
+  const prompt = `
+    You are an elite golf caddie focused on course management, dispersion patterns, and Strokes Gained analysis.
+
+    Analyze this round using the OTT / APP / ARG / PUTT category breakdown:
+
+    ${roundData}
+
+    Identify the biggest weakness backed by the data.
     Give ONE specific, actionable drill to improve.
-    Keep the tone encouraging but professional. Max 3 sentences.
+    Keep the tone encouraging but professional. Max 4 sentences.
   `
 
   try {

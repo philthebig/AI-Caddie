@@ -1,0 +1,15 @@
+---
+description: Styling rules for Tailwind CSS, dashboard layouts, and data entry forms
+globs: src/components/**/*.tsx, src/app/**/*.tsx
+alwaysApply: false
+---
+
+# Tailwind CSS & UI Style Guide
+
+## Layout & Responsiveness
+- **Mobile-First Prep:** Phase 1 is a web MVP, but it will eventually transition to React Native. Build dashboards and forms using clean, responsive Tailwind layouts (`flex`, `grid`, `md:grid-cols-2`) so the viewport scales gracefully down to mobile screens.
+- Use strict flexbox spacing (`space-y-4`, `gap-6`) instead of arbitrary margins.
+
+## Interactive Forms (Data Entry)
+- Data entry forms for recording fairways, GIR, and putts must be clean, large, and tap-friendly (anticipating future mobile use).
+- Use distinct visual states for miss direction toggles (e.g., a 3-button toggle group for Off-the-Tee: [ Left | Hit | Right ]).

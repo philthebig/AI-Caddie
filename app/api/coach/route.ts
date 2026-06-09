@@ -1,6 +1,7 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { revalidatePath } from 'next/cache';
+import { formatRoundForAI } from '@/lib/golf-logic/aggregate';
 import { prisma } from '@/lib/db';
 
 // Allow streaming responses up to 30 seconds
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
   // 2. Fetch the round data
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    include: { user: true }
+    include: { user: true, holes: { orderBy: { holeNumber: 'asc' } } },
   });
 
   if (!round) {
@@ -21,18 +22,18 @@ export async function POST(req: Request) {
   }
 
   // 3. Define the Prompt
-  const prompt = `
-    You are an elite golf caddie. Analyze this round for ${round.user.name}:
-    
-    Score: ${round.totalScore}
-    Fairways Hit: ${round.fairwaysHit}
-    Greens in Regulation: ${round.greensInReg}
-    Putts: ${round.totalPutts}
-    Penalties: ${round.penaltyStrokes}
+  const roundData = formatRoundForAI(round);
 
-    Identify the biggest weakness.
-    Give ONE specific, actionable drill to improve.
-    Keep the tone encouraging but professional. Max 3 sentences.
+  const prompt = `
+    You are an elite golf caddie focused on course management, dispersion patterns, and Strokes Gained analysis — not swing mechanics.
+
+    Analyze this round using the OTT / APP / ARG / PUTT category breakdown and miss-direction patterns:
+
+    ${roundData}
+
+    Identify the single biggest weakness backed by the data (e.g. right-side OTT misses, short-sided APP misses, three-putt frequency).
+    Give ONE specific, actionable drill to address it.
+    Keep the tone encouraging but professional. Max 4 sentences.
   `;
 
   // 4. Stream the text!

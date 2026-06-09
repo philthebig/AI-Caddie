@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   applicationName: 'AI Caddie',
   manifest: '/manifest.json',
   icons: {
-    icon: [{ url: '/logo.png', type: 'image/png' }],
-    apple: [{ url: '/logo.png', type: 'image/png' }],
+    icon: [{ url: '/logo-mark.png', type: 'image/png' }],
+    apple: [{ url: '/logo-mark.png', type: 'image/png' }],
   },
   appleWebApp: {
     capable: true,
@@ -55,7 +55,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200 px-4 py-2.5 flex justify-between items-center safe-top">
+          <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-3 py-1 flex justify-between items-center safe-top h-11 sm:h-12">
             <Logo priority />
             <SignedIn>
               <UserButton />

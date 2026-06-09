@@ -105,6 +105,31 @@ export type RoundAggregates = {
   coursePar: number | null
 }
 
+export type StrokesGainedHole = {
+  holeNumber: number
+  ott: number
+  app: number
+  arg: number
+  putt: number
+  total: number
+  totalVsScore: number
+}
+
+export type StrokesGainedBreakdown = {
+  ott: number
+  app: number
+  arg: number
+  putt: number
+  total: number
+  totalVsScore: number
+  perHole: StrokesGainedHole[]
+}
+
+export type CreateRoundErrorDetails = {
+  formErrors: string[]
+  fieldErrors: Record<string, string[] | undefined>
+}
+
 export function emptyHole(holeNumber: number, par = 4): HoleInput {
   return {
     holeNumber,

@@ -1,5 +1,6 @@
 import type { Hole, Round } from '@prisma/client'
 import type { HoleInput, RoundAggregates } from '@/lib/types/golf'
+import { computeRoundStrokesGained, formatStrokesGained } from './strokes-gained'
 
 type HoleLike = Pick<
   Hole,
@@ -114,9 +115,14 @@ export function formatRoundForAI(
     if (hole.putts >= 3) threePutts++
   }
 
+  const sg = computeRoundStrokesGained(round.holes)
+
   lines.push(
     '',
-    '--- Category breakdown (OTT / APP / ARG / PUTT) ---',
+    '--- Strokes Gained (computed — use these numbers directly) ---',
+    formatStrokesGained(sg),
+    '',
+    '--- Miss patterns (OTT / APP / ARG / PUTT) ---',
     `OTT misses: Left ${ottMisses.LEFT}, Right ${ottMisses.RIGHT}`,
     `APP misses: Left ${appMisses.LEFT}, Right ${appMisses.RIGHT}, Short ${appMisses.SHORT}, Long ${appMisses.LONG}`
   )

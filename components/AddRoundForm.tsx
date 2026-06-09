@@ -7,6 +7,7 @@ import {
   APP_MISS_DIRECTIONS,
   emptyHole,
   OTT_MISS_DIRECTIONS,
+  type CreateRoundErrorDetails,
   type HoleCount,
   type HoleInput,
 } from '@/lib/types/golf'
@@ -49,7 +50,26 @@ export default function AddRoundForm() {
     DEFAULT_PARS_18.map((par, i) => emptyHole(i + 1, par))
   )
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+
+  function applySubmitErrors(message: string, details?: CreateRoundErrorDetails) {
+    const fromDetails = [
+      ...(details?.formErrors ?? []),
+      ...Object.values(details?.fieldErrors ?? {}).flatMap((errs) => errs ?? []),
+    ]
+    const messages = message.split('; ').filter(Boolean)
+    const unique = [...new Set([...messages, ...fromDetails].filter(Boolean))]
+
+    setFieldErrors(unique)
+    setError(unique.length > 1 ? 'Please fix the issues below:' : unique[0] ?? message)
+
+    const holeMatch = unique.join(' ').match(/Hole (\d+):/)
+    if (holeMatch) {
+      setStep('holes')
+      setCurrentHole(Number(holeMatch[1]) - 1)
+    }
+  }
 
   const hasRealCourse = externalCourseId != null && teeName != null
 
@@ -140,6 +160,7 @@ export default function AddRoundForm() {
   async function handleSubmit(formData: FormData) {
     setSubmitting(true)
     setError(null)
+    setFieldErrors([])
     const payload = activeHoles.map((h) => ({
       ...h,
       appMissDirection: h.gir ? null : (h.appMissDirection ?? 'SHORT'),
@@ -158,7 +179,12 @@ export default function AddRoundForm() {
     setSubmitting(false)
 
     if (result?.error) {
-      setError(result.error)
+      applySubmitErrors(result.error, result.details)
+      return
+    }
+
+    if (!result?.success) {
+      applySubmitErrors('Something went wrong. Please try again.')
       return
     }
 
@@ -187,7 +213,14 @@ export default function AddRoundForm() {
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+          <p>{error}</p>
+          {fieldErrors.length > 1 && (
+            <ul className="mt-2 list-disc pl-5 space-y-1">
+              {fieldErrors.map((msg) => (
+                <li key={msg}>{msg}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

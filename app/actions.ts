@@ -1,30 +1,21 @@
 'use server'
 
+import { getDbUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
-import { createRoundSchema, normalizeHoles, type HoleInput } from '@/lib/types/golf'
-import { currentUser } from '@clerk/nextjs/server'
+import {
+  createRoundSchema,
+  normalizeHoles,
+  type CreateRoundErrorDetails,
+  type HoleInput,
+} from '@/lib/types/golf'
 import { revalidatePath } from 'next/cache'
 
 export async function createRound(formData: FormData) {
-  const user = await currentUser()
-
-  if (!user) {
-    return { error: 'You must be logged in' }
-  }
-
-  let dbUser = await prisma.user.findUnique({
-    where: { email: user.emailAddresses[0].emailAddress },
-  })
+  const dbUser = await getDbUser()
 
   if (!dbUser) {
-    dbUser = await prisma.user.create({
-      data: {
-        email: user.emailAddresses[0].emailAddress,
-        name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || null,
-        id: user.id,
-      },
-    })
+    return { error: 'You must be logged in' }
   }
 
   const holesJson = formData.get('holesJson')
@@ -58,48 +49,54 @@ export async function createRound(formData: FormData) {
 
   if (!result.success) {
     const messages = result.error.issues.map((i) => i.message).join('; ')
-    return { error: messages || 'Invalid data', details: result.error.flatten() }
+    const details = result.error.flatten() as CreateRoundErrorDetails
+    return { error: messages || 'Invalid data', details }
   }
 
   const { courseName, externalCourseId, teeName, holeCount, coursePar, holes } = result.data
   const aggregates = computeRoundAggregates(holes, coursePar)
 
-  await prisma.$transaction(async (tx) => {
-    const round = await tx.round.create({
-      data: {
-        userId: dbUser!.id,
-        courseName,
-        externalCourseId: externalCourseId ?? null,
-        teeName: teeName ?? null,
-        holeCount,
-        coursePar: aggregates.coursePar,
-        totalScore: aggregates.totalScore,
-        fairwaysHit: aggregates.fairwaysHit,
-        greensInReg: aggregates.greensInReg,
-        totalPutts: aggregates.totalPutts,
-        penaltyStrokes: aggregates.penaltyStrokes,
-      },
-    })
+  try {
+    await prisma.$transaction(async (tx) => {
+      const round = await tx.round.create({
+        data: {
+          userId: dbUser.id,
+          courseName,
+          externalCourseId: externalCourseId ?? null,
+          teeName: teeName ?? null,
+          holeCount,
+          coursePar: aggregates.coursePar,
+          totalScore: aggregates.totalScore,
+          fairwaysHit: aggregates.fairwaysHit,
+          greensInReg: aggregates.greensInReg,
+          totalPutts: aggregates.totalPutts,
+          penaltyStrokes: aggregates.penaltyStrokes,
+        },
+      })
 
-    await tx.hole.createMany({
-      data: holes.map((hole) => ({
-        roundId: round.id,
-        holeNumber: hole.holeNumber,
-        par: hole.par ?? null,
-        yardage: hole.yardage ?? null,
-        score: hole.score,
-        putts: hole.putts,
-        penaltyStrokes: hole.penaltyStrokes,
-        ottMissDirection: hole.ottMissDirection ?? null,
-        gir: hole.gir,
-        appMissDirection: hole.gir ? null : (hole.appMissDirection ?? null),
-        approachProximity: hole.gir ? null : (hole.approachProximity ?? null),
-        upAndDownAttempt: hole.gir ? null : (hole.upAndDownAttempt ?? null),
-        upAndDownSuccess: hole.gir ? null : (hole.upAndDownSuccess ?? null),
-        argProximity: hole.gir ? null : (hole.argProximity ?? null),
-      })),
+      await tx.hole.createMany({
+        data: holes.map((hole) => ({
+          roundId: round.id,
+          holeNumber: hole.holeNumber,
+          par: hole.par ?? null,
+          yardage: hole.yardage ?? null,
+          score: hole.score,
+          putts: hole.putts,
+          penaltyStrokes: hole.penaltyStrokes,
+          ottMissDirection: hole.ottMissDirection ?? null,
+          gir: hole.gir,
+          appMissDirection: hole.gir ? null : (hole.appMissDirection ?? null),
+          approachProximity: hole.gir ? null : (hole.approachProximity ?? null),
+          upAndDownAttempt: hole.gir ? null : (hole.upAndDownAttempt ?? null),
+          upAndDownSuccess: hole.gir ? null : (hole.upAndDownSuccess ?? null),
+          argProximity: hole.gir ? null : (hole.argProximity ?? null),
+        })),
+      })
     })
-  })
+  } catch (err) {
+    console.error('createRound failed:', err)
+    return { error: 'Could not save your round. Please try again.' }
+  }
 
   revalidatePath('/')
   return { success: true }

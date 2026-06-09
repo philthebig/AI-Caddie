@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
-import { createRoundSchema } from '@/lib/types/golf'
+import { createRoundSchema, normalizeHoles, type HoleInput } from '@/lib/types/golf'
 import { currentUser } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 
@@ -43,13 +43,14 @@ export async function createRound(formData: FormData) {
     courseName: formData.get('courseName'),
     holeCount: formData.get('holeCount'),
     coursePar: formData.get('coursePar') || undefined,
-    holes: parsedHoles,
+    holes: normalizeHoles(parsedHoles as HoleInput[]),
   }
 
   const result = createRoundSchema.safeParse(rawData)
 
   if (!result.success) {
-    return { error: 'Invalid data', details: result.error.flatten() }
+    const messages = result.error.issues.map((i) => i.message).join('; ')
+    return { error: messages || 'Invalid data', details: result.error.flatten() }
   }
 
   const { courseName, holeCount, coursePar, holes } = result.data

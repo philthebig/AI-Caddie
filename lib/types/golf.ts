@@ -112,10 +112,28 @@ export function emptyHole(holeNumber: number, par = 4): HoleInput {
     penaltyStrokes: 0,
     ottMissDirection: par === 3 ? null : 'HIT',
     gir: false,
-    appMissDirection: null,
+    appMissDirection: 'SHORT',
     approachProximity: null,
     upAndDownAttempt: null,
     upAndDownSuccess: null,
     argProximity: null,
   }
+}
+
+/** Fill in defaults so untouched form state still passes validation. */
+export function normalizeHoles(holes: HoleInput[]): HoleInput[] {
+  return holes.map((hole) => {
+    const par = hole.par ?? 4
+    const gir = hole.gir
+    return {
+      ...hole,
+      penaltyStrokes: hole.penaltyStrokes ?? 0,
+      ottMissDirection: par === 3 ? null : (hole.ottMissDirection ?? 'HIT'),
+      appMissDirection: gir ? null : (hole.appMissDirection ?? 'SHORT'),
+      approachProximity: gir ? null : hole.approachProximity ?? null,
+      upAndDownAttempt: gir ? null : hole.upAndDownAttempt ?? null,
+      upAndDownSuccess: gir ? null : hole.upAndDownSuccess ?? null,
+      argProximity: gir ? null : hole.argProximity ?? null,
+    }
+  })
 }

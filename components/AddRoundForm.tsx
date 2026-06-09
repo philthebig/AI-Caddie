@@ -99,7 +99,12 @@ export default function AddRoundForm() {
   async function handleSubmit(formData: FormData) {
     setSubmitting(true)
     setError(null)
-    formData.set('holesJson', JSON.stringify(activeHoles))
+    const payload = activeHoles.map((h) => ({
+      ...h,
+      appMissDirection: h.gir ? null : (h.appMissDirection ?? 'SHORT'),
+      ottMissDirection: (h.par ?? 4) === 3 ? null : (h.ottMissDirection ?? 'HIT'),
+    }))
+    formData.set('holesJson', JSON.stringify(payload))
     formData.set('coursePar', String(coursePar))
     const result = await createRound(formData)
     setSubmitting(false)

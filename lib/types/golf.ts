@@ -27,6 +27,8 @@ export const holeInputSchema = z.object({
 export const createRoundSchema = z
   .object({
     courseName: z.string().min(1),
+    externalCourseId: z.coerce.number().int().positive().optional().nullable(),
+    teeName: z.string().optional().nullable(),
     holeCount: z.coerce.number().pipe(z.union([z.literal(9), z.literal(18)])),
     coursePar: z.coerce.number().int().min(27).max(80).optional(),
     holes: z.array(holeInputSchema).min(1),

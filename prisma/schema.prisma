@@ -35,9 +35,11 @@ model Round {
   userId         String
   user           User     @relation(fields: [userId], references: [id])
 
-  courseName     String
-  holeCount      Int      @default(18)
-  coursePar      Int?
+  courseName        String
+  externalCourseId  Int?
+  teeName           String?
+  holeCount         Int      @default(18)
+  coursePar         Int?
 
   // Aggregates (computed from holes on save; kept for dashboard + legacy rounds)
   totalScore     Int

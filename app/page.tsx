@@ -76,6 +76,9 @@ export default async function Home() {
                     <h3 className="font-bold text-xl text-slate-800">{round.courseName}</h3>
                     <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
                       {new Date(round.date).toLocaleDateString()}
+                      {round.teeName && (
+                        <span className="ml-2 text-slate-500">{round.teeName} tees</span>
+                      )}
                       {round.holes.length > 0 && (
                         <span className="ml-2 text-emerald-600">
                           · {round.holes.length} holes logged

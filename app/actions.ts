@@ -39,8 +39,16 @@ export async function createRound(formData: FormData) {
     return { error: 'Invalid hole data' }
   }
 
+  const externalCourseIdRaw = formData.get('externalCourseId')
+  const parsedExternalCourseId =
+    typeof externalCourseIdRaw === 'string' && externalCourseIdRaw.trim()
+      ? Number(externalCourseIdRaw)
+      : undefined
+
   const rawData = {
     courseName: formData.get('courseName'),
+    externalCourseId: Number.isFinite(parsedExternalCourseId) ? parsedExternalCourseId : undefined,
+    teeName: formData.get('teeName') || undefined,
     holeCount: formData.get('holeCount'),
     coursePar: formData.get('coursePar') || undefined,
     holes: normalizeHoles(parsedHoles as HoleInput[]),
@@ -53,7 +61,7 @@ export async function createRound(formData: FormData) {
     return { error: messages || 'Invalid data', details: result.error.flatten() }
   }
 
-  const { courseName, holeCount, coursePar, holes } = result.data
+  const { courseName, externalCourseId, teeName, holeCount, coursePar, holes } = result.data
   const aggregates = computeRoundAggregates(holes, coursePar)
 
   await prisma.$transaction(async (tx) => {
@@ -61,6 +69,8 @@ export async function createRound(formData: FormData) {
       data: {
         userId: dbUser!.id,
         courseName,
+        externalCourseId: externalCourseId ?? null,
+        teeName: teeName ?? null,
         holeCount,
         coursePar: aggregates.coursePar,
         totalScore: aggregates.totalScore,

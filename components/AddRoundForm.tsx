@@ -1,6 +1,7 @@
 'use client'
 
 import { createRound } from '@/app/actions'
+import CourseSearch, { type CourseSearchSelection } from '@/components/CourseSearch'
 import ToggleGroup from '@/components/ToggleGroup'
 import {
   APP_MISS_DIRECTIONS,
@@ -9,7 +10,8 @@ import {
   type HoleCount,
   type HoleInput,
 } from '@/lib/types/golf'
-import { useMemo, useRef, useState } from 'react'
+import type { NineSide } from '@/lib/types/course'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 const DEFAULT_PARS_18 = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4]
 
@@ -37,6 +39,9 @@ export default function AddRoundForm() {
   const formRef = useRef<HTMLFormElement>(null)
   const [step, setStep] = useState<'setup' | 'holes' | 'review'>('setup')
   const [courseName, setCourseName] = useState('')
+  const [externalCourseId, setExternalCourseId] = useState<number | null>(null)
+  const [teeName, setTeeName] = useState<string | null>(null)
+  const [nineSide, setNineSide] = useState<NineSide>('front')
   const [holeCount, setHoleCount] = useState<HoleCount>(18)
   const [showCourseDetails, setShowCourseDetails] = useState(false)
   const [currentHole, setCurrentHole] = useState(0)
@@ -46,13 +51,26 @@ export default function AddRoundForm() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const hasRealCourse = externalCourseId != null && teeName != null
+
   const activeHoles = useMemo(() => holes.slice(0, holeCount), [holes, holeCount])
   const coursePar = useMemo(
     () => activeHoles.reduce((sum, h) => sum + (h.par ?? 4), 0),
     [activeHoles]
   )
 
-  function initHoles(count: HoleCount) {
+  const appliedSelection = useMemo(() => {
+    if (!hasRealCourse || !courseName || !teeName) return null
+    return { courseName, teeName }
+  }, [hasRealCourse, courseName, teeName])
+
+  function initHoles(count: HoleCount, source?: HoleInput[]) {
+    if (source && source.length >= count) {
+      setHoles(source.slice(0, count))
+      setCurrentHole(0)
+      return
+    }
+
     setHoles((prev) => {
       const next = Array.from({ length: count }, (_, i) => {
         const existing = prev[i]
@@ -63,6 +81,29 @@ export default function AddRoundForm() {
     })
     setCurrentHole(0)
   }
+
+  const handleCourseApply = useCallback((selection: CourseSearchSelection) => {
+    setCourseName(selection.courseName)
+    setExternalCourseId(selection.externalCourseId)
+    setTeeName(selection.teeName)
+    setHoles(selection.holes)
+    setCurrentHole(0)
+    setShowCourseDetails(true)
+  }, [])
+
+  const handleManualCourseName = useCallback((name: string) => {
+    setCourseName(name)
+    setExternalCourseId(null)
+    setTeeName(null)
+  }, [])
+
+  const handleCourseClear = useCallback(() => {
+    setCourseName('')
+    setExternalCourseId(null)
+    setTeeName(null)
+    initHoles(holeCount)
+    setShowCourseDetails(false)
+  }, [holeCount])
 
   function updateHole(index: number, patch: Partial<HoleInput>) {
     setHoles((prev) => {
@@ -106,6 +147,13 @@ export default function AddRoundForm() {
     }))
     formData.set('holesJson', JSON.stringify(payload))
     formData.set('coursePar', String(coursePar))
+    formData.set('courseName', courseName)
+    if (externalCourseId != null) {
+      formData.set('externalCourseId', String(externalCourseId))
+    }
+    if (teeName) {
+      formData.set('teeName', teeName)
+    }
     const result = await createRound(formData)
     setSubmitting(false)
 
@@ -116,6 +164,9 @@ export default function AddRoundForm() {
 
     formRef.current?.reset()
     setCourseName('')
+    setExternalCourseId(null)
+    setTeeName(null)
+    setNineSide('front')
     setHoleCount(18)
     setShowCourseDetails(false)
     setCurrentHole(0)
@@ -125,12 +176,13 @@ export default function AddRoundForm() {
 
   const hole = activeHoles[currentHole]
   const isPar3 = (hole?.par ?? 4) === 3
+  const canStartEntry = courseName.trim().length > 0 && (hasRealCourse || !appliedSelection)
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-8">
       <h3 className="text-xl font-bold mb-1 text-emerald-800">Log a New Round</h3>
       <p className="text-sm text-slate-500 mb-4">
-        Hole-by-hole capture for OTT, approach, around-the-green, and putting.
+        Search a real course for par and yardages, then log hole-by-hole stats.
       </p>
 
       {error && (
@@ -144,21 +196,22 @@ export default function AddRoundForm() {
         <input type="hidden" name="coursePar" value={coursePar} />
         <input type="hidden" name="courseName" value={courseName} />
         <input type="hidden" name="holeCount" value={holeCount} />
+        {externalCourseId != null && (
+          <input type="hidden" name="externalCourseId" value={externalCourseId} />
+        )}
+        {teeName && <input type="hidden" name="teeName" value={teeName} />}
 
         {step === 'setup' && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Course Name</label>
-              <input
-                name="courseName"
-                type="text"
-                required
-                value={courseName}
-                onChange={(e) => setCourseName(e.target.value)}
-                placeholder="e.g. Pebble Beach"
-                className="w-full rounded-md border border-slate-300 p-3 shadow-sm"
-              />
-            </div>
+            <CourseSearch
+              holeCount={holeCount}
+              nineSide={nineSide}
+              onNineSideChange={setNineSide}
+              onCourseApply={handleCourseApply}
+              onManualCourseName={handleManualCourseName}
+              onClear={handleCourseClear}
+              appliedSelection={appliedSelection}
+            />
 
             <ToggleGroup
               label="Holes played"
@@ -167,62 +220,91 @@ export default function AddRoundForm() {
               onChange={(count) => {
                 const n = Number(count) as HoleCount
                 setHoleCount(n)
-                initHoles(n)
+                if (!hasRealCourse) {
+                  initHoles(n)
+                }
               }}
             />
-            <button
-              type="button"
-              onClick={() => setShowCourseDetails((v) => !v)}
-              className="text-sm font-medium text-emerald-700 hover:text-emerald-900"
-            >
-              {showCourseDetails ? '− Hide course details' : '+ Add par & yardages (optional)'}
-            </button>
 
-            {showCourseDetails && (
+            {(hasRealCourse || showCourseDetails) && (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Course par: {coursePar}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Course layout · Par {coursePar}
+                  </p>
+                  {!hasRealCourse && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCourseDetails(false)}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                    >
+                      Hide
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                   {activeHoles.map((h, i) => (
                     <div key={h.holeNumber} className="rounded-md bg-white p-2 border border-slate-200">
                       <p className="text-xs font-bold text-slate-500 mb-1">Hole {h.holeNumber}</p>
-                      <label className="text-xs text-slate-500">Par</label>
-                      <select
-                        value={h.par ?? 4}
-                        onChange={(e) => updateCourseDetail(i, 'par', Number(e.target.value))}
-                        className="w-full rounded border border-slate-200 p-1 text-sm mb-1"
-                      >
-                        <option value={3}>3</option>
-                        <option value={4}>4</option>
-                        <option value={5}>5</option>
-                      </select>
-                      <label className="text-xs text-slate-500">Yds</label>
-                      <input
-                        type="number"
-                        min={50}
-                        max={700}
-                        placeholder="—"
-                        value={h.yardage ?? ''}
-                        onChange={(e) =>
-                          updateCourseDetail(
-                            i,
-                            'yardage',
-                            e.target.value ? Number(e.target.value) : undefined
-                          )
-                        }
-                        className="w-full rounded border border-slate-200 p-1 text-sm"
-                      />
+                      <p className="text-sm font-semibold text-slate-800">
+                        Par {h.par ?? 4}
+                        {h.yardage != null ? ` · ${h.yardage} yds` : ''}
+                      </p>
+                      {!hasRealCourse && (
+                        <>
+                          <label className="text-xs text-slate-500">Par</label>
+                          <select
+                            value={h.par ?? 4}
+                            onChange={(e) => updateCourseDetail(i, 'par', Number(e.target.value))}
+                            className="w-full rounded border border-slate-200 p-1 text-sm mb-1"
+                          >
+                            <option value={3}>3</option>
+                            <option value={4}>4</option>
+                            <option value={5}>5</option>
+                          </select>
+                          <label className="text-xs text-slate-500">Yds</label>
+                          <input
+                            type="number"
+                            min={50}
+                            max={700}
+                            placeholder="—"
+                            value={h.yardage ?? ''}
+                            onChange={(e) =>
+                              updateCourseDetail(
+                                i,
+                                'yardage',
+                                e.target.value ? Number(e.target.value) : undefined
+                              )
+                            }
+                            className="w-full rounded border border-slate-200 p-1 text-sm"
+                          />
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
+            {!hasRealCourse && !showCourseDetails && (
+              <button
+                type="button"
+                onClick={() => setShowCourseDetails(true)}
+                className="text-sm font-medium text-emerald-700 hover:text-emerald-900"
+              >
+                + Add par & yardages manually (optional)
+              </button>
+            )}
+
             <button
               type="button"
-              disabled={!courseName.trim()}
-              onClick={() => setStep('holes')}
+              disabled={!canStartEntry}
+              onClick={() => {
+                if (!hasRealCourse) {
+                  initHoles(holeCount)
+                }
+                setStep('holes')
+              }}
               className="w-full rounded-md bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               Start hole-by-hole entry →
@@ -425,7 +507,10 @@ export default function AddRoundForm() {
             <h4 className="text-lg font-bold text-slate-800">Review</h4>
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm space-y-1">
               <p>
-                <span className="font-semibold">{courseName}</span> · {holeCount} holes · Par {coursePar}
+                <span className="font-semibold">{courseName}</span>
+                {teeName && <span className="text-slate-500"> · {teeName} tees</span>}
+                {' · '}
+                {holeCount} holes · Par {coursePar}
               </p>
               <p>
                 Total score:{' '}
@@ -443,7 +528,8 @@ export default function AddRoundForm() {
               {activeHoles.map((h) => (
                 <div key={h.holeNumber} className="flex justify-between px-3 py-2">
                   <span>
-                    H{h.holeNumber} (par {h.par ?? 4})
+                    H{h.holeNumber} (par {h.par ?? 4}
+                    {h.yardage != null ? `, ${h.yardage} yds` : ''})
                   </span>
                   <span className="text-slate-600">
                     {h.score} · {h.putts}p

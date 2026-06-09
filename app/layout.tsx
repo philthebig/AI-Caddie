@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ClerkProvider, UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs'
+import Logo from '@/components/Logo'
 import PwaProvider from '@/components/PwaProvider'
 import './globals.css'
 
@@ -23,6 +24,10 @@ export const metadata: Metadata = {
     'Log golf rounds hole-by-hole, get AI coaching feedback, and track GIR, fairways, and putting trends.',
   applicationName: 'AI Caddie',
   manifest: '/manifest.json',
+  icons: {
+    icon: [{ url: '/logo.png', type: 'image/png' }],
+    apple: [{ url: '/logo.png', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -50,10 +55,8 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200 px-4 py-3 flex justify-between items-center safe-top">
-            <a href="/" className="font-bold text-lg text-emerald-800 tracking-tight min-h-11 flex items-center">
-              ⛳ AI Caddie
-            </a>
+          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200 px-4 py-2.5 flex justify-between items-center safe-top">
+            <Logo priority />
             <SignedIn>
               <UserButton />
             </SignedIn>

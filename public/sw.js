@@ -3,7 +3,7 @@ const CACHE = 'ai-caddie-v1'
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then((cache) =>
-      cache.addAll(['/', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'])
+      cache.addAll(['/', '/manifest.json', '/logo.png', '/icons/icon-192.png', '/icons/icon-512.png'])
     )
   )
   self.skipWaiting()

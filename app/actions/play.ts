@@ -115,6 +115,9 @@ export async function startRound(formData: FormData) {
     return { roundId: round.id }
   } catch (err) {
     console.error('startRound failed:', err)
+    if (process.env.NODE_ENV === 'development' && err instanceof Error) {
+      return { error: `Could not start your round: ${err.message}` }
+    }
     return { error: 'Could not start your round. Please try again.' }
   }
 }

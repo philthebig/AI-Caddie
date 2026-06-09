@@ -195,9 +195,10 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     setPickerOpen(false)
   }
 
-  function buildRoundFormData() {
+  function buildRoundFormData(holesOverride?: HoleInput[]) {
     const formData = new FormData()
-    const payload = activeHoles.map((h) => ({
+    const sourceHoles = (holesOverride ?? activeHoles).slice(0, holeCount)
+    const payload = sourceHoles.map((h) => ({
       ...h,
       appMissDirection: h.gir ? null : (h.appMissDirection ?? 'SHORT'),
       ottMissDirection: (h.par ?? 4) === 3 ? null : (h.ottMissDirection ?? 'HIT'),
@@ -223,14 +224,23 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
 
   async function handleStartOnCourse() {
     if (!canStartEntry) return
+
+    let holesForStart = activeHoles
     if (!hasRealCourse) {
-      initHoles(holeCount)
+      holesForStart = Array.from({ length: holeCount }, (_, i) => {
+        const existing = holes[i]
+        const par = existing?.par ?? DEFAULT_PARS_18[i] ?? 4
+        return existing?.holeNumber === i + 1 ? existing : emptyHole(i + 1, par)
+      })
+      setHoles(holesForStart)
+      setCurrentHole(0)
     }
+
     setStartingPlay(true)
     setError(null)
     setFieldErrors([])
 
-    const result = await startRound(buildRoundFormData())
+    const result = await startRound(buildRoundFormData(holesForStart))
     setStartingPlay(false)
 
     if (result?.error) {

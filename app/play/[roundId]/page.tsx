@@ -46,6 +46,8 @@ export default async function PlayRoundPage({ params }: PageProps) {
         roundId={round.id}
         courseName={round.courseName}
         teeName={round.teeName}
+        courseLatitude={round.courseLatitude}
+        courseLongitude={round.courseLongitude}
         holeCount={round.holeCount as HoleCount}
         initialHoles={initialHoles}
         initialSavedHoleIndices={initialSavedHoleIndices}

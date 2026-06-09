@@ -9,6 +9,8 @@ export type CourseSearchSelection = {
   courseName: string
   teeName: string
   holes: HoleInput[]
+  courseLatitude?: number | null
+  courseLongitude?: number | null
 }
 
 type SearchHit = {
@@ -42,6 +44,8 @@ type CourseDetailResponse = {
   courseName: string
   city: string | null
   state: string | null
+  latitude: number | null
+  longitude: number | null
   tees: CourseTee[]
 }
 
@@ -161,6 +165,8 @@ export default function CourseSearch({
       courseName: courseDetail.label,
       teeName: selectedTee.name,
       holes: teeHolesToInputs(selectedTee, holeCount, nineSide),
+      courseLatitude: courseDetail.latitude,
+      courseLongitude: courseDetail.longitude,
     })
   }, [selectedTee, courseDetail, holeCount, nineSide])
 

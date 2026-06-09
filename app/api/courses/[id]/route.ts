@@ -23,6 +23,8 @@ export async function GET(_request: Request, context: RouteContext) {
       courseName: course.course_name,
       city: course.location?.city ?? null,
       state: course.location?.state ?? null,
+      latitude: course.location?.latitude ?? null,
+      longitude: course.location?.longitude ?? null,
       tees: tees.map((tee) => ({
         name: tee.tee_name,
         totalYards: tee.total_yards ?? null,

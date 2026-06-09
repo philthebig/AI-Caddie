@@ -42,6 +42,8 @@ model Round {
 
   courseName        String
   externalCourseId  Int?
+  courseLatitude    Float?
+  courseLongitude   Float?
   teeName           String?
   holeCount         Int      @default(18)
   coursePar         Int?

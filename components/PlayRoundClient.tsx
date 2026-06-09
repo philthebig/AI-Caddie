@@ -2,6 +2,7 @@
 
 import { finishRound, saveHole } from '@/app/actions/play'
 import CancelRoundButton from '@/components/CancelRoundButton'
+import DistanceReadout from '@/components/DistanceReadout'
 import HoleNavBar from '@/components/HoleNavBar'
 import HoleScoreCard from '@/components/HoleScoreCard'
 import PlayRoundHeader from '@/components/PlayRoundHeader'
@@ -47,6 +48,8 @@ type PlayRoundClientProps = {
   roundId: string
   courseName: string
   teeName: string | null
+  courseLatitude: number | null
+  courseLongitude: number | null
   holeCount: HoleCount
   initialHoles: HoleInput[]
   /** Hole indices (0-based) already saved during this live round. */
@@ -57,6 +60,8 @@ export default function PlayRoundClient({
   roundId,
   courseName,
   teeName,
+  courseLatitude,
+  courseLongitude,
   holeCount,
   initialHoles,
   initialSavedHoleIndices = [],
@@ -209,6 +214,12 @@ export default function PlayRoundClient({
             </button>
           </div>
         )}
+
+        <DistanceReadout
+          holeYardage={hole.yardage}
+          courseLatitude={courseLatitude}
+          courseLongitude={courseLongitude}
+        />
 
         <HoleScoreCard hole={hole} onUpdate={(patch) => updateHole(currentHole, patch)} />
 

@@ -179,7 +179,7 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 ---
 
-## Phase 6c — GPS hook + distance display ⬜
+## Phase 6c — GPS hook + distance display ✅
 
 **Goal:** Show distance on the play screen using phone GPS and/or static hole yardage.
 
@@ -205,10 +205,10 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 ### Acceptance criteria
 
-- [ ] Play screen shows hole yardage from tee data.
-- [ ] With location permission, shows live distance readout (course center or labeled approximation).
-- [ ] Graceful fallback when GPS denied or unavailable.
-- [ ] No new paid API dependencies.
+- [x] Play screen shows hole yardage from tee data.
+- [x] With location permission, shows live distance readout (course center or labeled approximation).
+- [x] Graceful fallback when GPS denied or unavailable.
+- [x] No new paid API dependencies.
 
 ---
 
@@ -390,7 +390,7 @@ model CourseGpsCache {
 |-------|------|--------|
 | 6a | Live play mode | ✅ |
 | 6b | Play UI polish | ✅ |
-| 6c | GPS + distance display | ⬜ |
+| 6c | GPS + distance display | ✅ |
 | 6d | Map view | ⬜ |
 | 6e | Offline sync | ⬜ |
 | 6f | Hole-level GPS (paid) | ⬜ |

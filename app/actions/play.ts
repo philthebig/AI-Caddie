@@ -36,6 +36,32 @@ export async function startRound(formData: FormData) {
       ? Number(externalCourseIdRaw)
       : undefined
 
+  const courseLatitudeRaw = formData.get('courseLatitude')
+  const courseLongitudeRaw = formData.get('courseLongitude')
+  const parsedLatitude =
+    typeof courseLatitudeRaw === 'string' && courseLatitudeRaw.trim()
+      ? Number(courseLatitudeRaw)
+      : undefined
+  const parsedLongitude =
+    typeof courseLongitudeRaw === 'string' && courseLongitudeRaw.trim()
+      ? Number(courseLongitudeRaw)
+      : undefined
+
+  const courseLatitude =
+    parsedLatitude != null &&
+    Number.isFinite(parsedLatitude) &&
+    parsedLatitude >= -90 &&
+    parsedLatitude <= 90
+      ? parsedLatitude
+      : undefined
+  const courseLongitude =
+    parsedLongitude != null &&
+    Number.isFinite(parsedLongitude) &&
+    parsedLongitude >= -180 &&
+    parsedLongitude <= 180
+      ? parsedLongitude
+      : undefined
+
   const rawData = {
     courseName: formData.get('courseName'),
     externalCourseId: Number.isFinite(parsedExternalCourseId) ? parsedExternalCourseId : undefined,
@@ -61,6 +87,8 @@ export async function startRound(formData: FormData) {
           userId: dbUser.id,
           courseName,
           externalCourseId: externalCourseId ?? null,
+          courseLatitude: courseLatitude ?? null,
+          courseLongitude: courseLongitude ?? null,
           teeName: teeName ?? null,
           holeCount,
           coursePar: aggregates.coursePar,

@@ -35,6 +35,8 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     edit?.externalCourseId ?? null
   )
   const [teeName, setTeeName] = useState<string | null>(edit?.teeName ?? null)
+  const [courseLatitude, setCourseLatitude] = useState<number | null>(null)
+  const [courseLongitude, setCourseLongitude] = useState<number | null>(null)
   const [nineSide, setNineSide] = useState<NineSide>('front')
   const [holeCount, setHoleCount] = useState<HoleCount>(edit?.holeCount ?? 18)
   const [showCourseDetails, setShowCourseDetails] = useState(isEdit)
@@ -109,6 +111,8 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     setCourseName(selection.courseName)
     setExternalCourseId(selection.externalCourseId)
     setTeeName(selection.teeName)
+    setCourseLatitude(selection.courseLatitude ?? null)
+    setCourseLongitude(selection.courseLongitude ?? null)
     setHoles(selection.holes)
     setCurrentHole(0)
     setShowCourseDetails(true)
@@ -118,12 +122,16 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     setCourseName(name)
     setExternalCourseId(null)
     setTeeName(null)
+    setCourseLatitude(null)
+    setCourseLongitude(null)
   }, [])
 
   const handleCourseClear = useCallback(() => {
     setCourseName('')
     setExternalCourseId(null)
     setTeeName(null)
+    setCourseLatitude(null)
+    setCourseLongitude(null)
     initHoles(holeCount)
     setShowCourseDetails(false)
   }, [holeCount])
@@ -204,6 +212,12 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     if (teeName) {
       formData.set('teeName', teeName)
     }
+    if (courseLatitude != null) {
+      formData.set('courseLatitude', String(courseLatitude))
+    }
+    if (courseLongitude != null) {
+      formData.set('courseLongitude', String(courseLongitude))
+    }
     return formData
   }
 
@@ -274,6 +288,8 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
     setCourseName('')
     setExternalCourseId(null)
     setTeeName(null)
+    setCourseLatitude(null)
+    setCourseLongitude(null)
     setNineSide('front')
     setHoleCount(18)
     setShowCourseDetails(false)

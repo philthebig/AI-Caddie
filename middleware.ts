@@ -2,8 +2,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Define which routes are protected (everything except static files)
 const isProtectedRoute = createRouteMatcher([
-  '/', // Protect the dashboard
-  '/api(.*)' // Protect API routes
+  '/',
+  '/rounds(.*)',
+  '/api(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

@@ -10,22 +10,21 @@ import {
   ottMissCost,
 } from './baselines'
 
-type HoleLike = Pick<
-  HoleInput,
-  | 'holeNumber'
-  | 'par'
-  | 'yardage'
-  | 'score'
-  | 'putts'
-  | 'penaltyStrokes'
-  | 'ottMissDirection'
-  | 'gir'
-  | 'appMissDirection'
-  | 'approachProximity'
-  | 'upAndDownAttempt'
-  | 'upAndDownSuccess'
-  | 'argProximity'
->
+type HoleLike = {
+  holeNumber: number
+  par?: number | null
+  yardage?: number | null
+  score: number
+  putts: number
+  penaltyStrokes?: number
+  ottMissDirection?: HoleInput['ottMissDirection']
+  gir: boolean
+  appMissDirection?: HoleInput['appMissDirection']
+  approachProximity?: number | null
+  upAndDownAttempt?: boolean | null
+  upAndDownSuccess?: boolean | null
+  argProximity?: number | null
+}
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10
@@ -48,8 +47,9 @@ export function computeHoleStrokesGained(hole: HoleLike): StrokesGainedHole {
   if (par >= 4 && hole.ottMissDirection) {
     ott = round1(ottMissCost(hole.ottMissDirection, yardage, par))
   }
-  if (hole.penaltyStrokes > 0) {
-    ott = round1(ott - hole.penaltyStrokes)
+  const penalties = hole.penaltyStrokes ?? 0
+  if (penalties > 0) {
+    ott = round1(ott - penalties)
   }
 
   // APP
@@ -126,7 +126,7 @@ export function formatStrokesGained(sg: StrokesGainedBreakdown): string {
       ['APP', sg.app],
       ['ARG', sg.arg],
       ['PUTT', sg.putt],
-    ] as const
+    ] as [string, number][]
   ).sort((a, b) => a[1] - b[1])[0]
 
   lines.push(`Weakest category: ${weakest[0]} (${sign(weakest[1])})`)

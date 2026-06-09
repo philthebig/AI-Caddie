@@ -205,7 +205,7 @@ export default function AddRoundForm() {
   const canStartEntry = courseName.trim().length > 0 && (hasRealCourse || !appliedSelection)
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-8">
+    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200">
       <h3 className="text-xl font-bold mb-1 text-emerald-800">Log a New Round</h3>
       <p className="text-sm text-slate-500 mb-4">
         Search a real course for par and yardages, then log hole-by-hole stats.
@@ -338,7 +338,7 @@ export default function AddRoundForm() {
                 }
                 setStep('holes')
               }}
-              className="w-full rounded-md bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 disabled:opacity-50 touch-manipulation"
             >
               Start hole-by-hole entry →
             </button>
@@ -502,7 +502,7 @@ export default function AddRoundForm() {
                 type="button"
                 disabled={currentHole === 0}
                 onClick={() => setCurrentHole((h) => h - 1)}
-                className="flex-1 rounded-md border border-slate-300 py-3 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                className="flex-1 rounded-xl border border-slate-300 py-3.5 min-h-12 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 touch-manipulation"
               >
                 ← Previous
               </button>
@@ -510,7 +510,7 @@ export default function AddRoundForm() {
                 <button
                   type="button"
                   onClick={() => setCurrentHole((h) => h + 1)}
-                  className="flex-1 rounded-md bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-700"
+                  className="flex-1 rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 touch-manipulation"
                 >
                   Next hole →
                 </button>
@@ -518,7 +518,7 @@ export default function AddRoundForm() {
                 <button
                   type="button"
                   onClick={() => setStep('review')}
-                  className="flex-1 rounded-md bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-700"
+                  className="flex-1 rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 touch-manipulation"
                 >
                   Review round →
                 </button>
@@ -579,7 +579,7 @@ export default function AddRoundForm() {
                   setStep('holes')
                   setCurrentHole(holeCount - 1)
                 }}
-                className="flex-1 rounded-md border border-slate-300 py-3 font-semibold text-slate-600 hover:bg-slate-50"
+                className="flex-1 rounded-xl border border-slate-300 py-3.5 min-h-12 font-semibold text-slate-600 hover:bg-slate-50 touch-manipulation"
               >
                 Edit holes
               </button>

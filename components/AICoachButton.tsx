@@ -25,12 +25,19 @@ export default function AICoachButton({ roundId }: { roundId: string }) {
   // If we have any completion text (even if still loading), show it!
   if (completion || isLoading) {
     return (
-      <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg">
-        <h4 className="font-bold text-indigo-900 text-sm mb-1 flex items-center gap-2">
-          {isLoading ? '🤖 AI Caddie is typing...' : '🤖 AI Caddie Analysis'}
+      <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl" aria-busy={isLoading}>
+        <h4 className="font-bold text-indigo-900 text-sm mb-2 flex items-center gap-2">
+          {isLoading ? (
+            <>
+              <span className="inline-block h-4 w-4 rounded-full border-2 border-indigo-300 border-t-indigo-700 animate-spin" />
+              AI Caddie is analyzing…
+            </>
+          ) : (
+            '🤖 AI Caddie Analysis'
+          )}
         </h4>
-        <p className="text-indigo-800 text-sm leading-relaxed animate-pulse-text">
-          {completion}
+        <p className={`text-indigo-800 text-sm leading-relaxed ${isLoading && !completion ? 'text-indigo-500' : ''}`}>
+          {completion || 'Reviewing your round stats…'}
         </p>
       </div>
     );
@@ -56,7 +63,7 @@ export default function AICoachButton({ roundId }: { roundId: string }) {
     <button 
       onClick={handleClick}
       disabled={isLoading}
-      className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex justify-center items-center gap-2"
+      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-3.5 min-h-12 px-4 rounded-xl transition-colors flex justify-center items-center gap-2 touch-manipulation disabled:opacity-60"
     >
       Get AI Coach Feedback ✨
     </button>

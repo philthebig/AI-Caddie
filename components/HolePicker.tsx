@@ -44,10 +44,10 @@ export default function HolePicker({
             <span>{i + 1}</span>
             {isComplete && (
               <span
-                className={`absolute bottom-1 text-[10px] leading-none ${
+                className={`absolute top-1 right-1.5 text-xs font-black leading-none ${
                   isCurrent ? 'text-emerald-600' : 'text-emerald-500'
                 }`}
-                aria-hidden
+                aria-label="Completed"
               >
                 ✓
               </span>

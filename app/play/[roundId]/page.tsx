@@ -36,6 +36,9 @@ export default async function PlayRoundPage({ params }: PageProps) {
   }
 
   const initialHoles = round.holes.map(holeInputFromDb)
+  const initialSavedHoleIndices = round.holes
+    .filter((hole) => hole.touched)
+    .map((hole) => hole.holeNumber - 1)
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-8 font-sans text-slate-900 pb-24">
@@ -46,6 +49,7 @@ export default async function PlayRoundPage({ params }: PageProps) {
           teeName={round.teeName}
           holeCount={round.holeCount as HoleCount}
           initialHoles={initialHoles}
+          initialSavedHoleIndices={initialSavedHoleIndices}
         />
       </div>
     </main>

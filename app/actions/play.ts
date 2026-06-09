@@ -130,7 +130,7 @@ export async function saveHole(roundId: string, holeNumber: number, holeData: Ho
         where: {
           roundId_holeNumber: { roundId, holeNumber },
         },
-        data: prismaData,
+        data: { ...prismaData, touched: true },
       })
 
       const allHoles = round.holes.map((h) =>
@@ -193,4 +193,32 @@ export async function finishRound(roundId: string) {
   revalidatePath(`/rounds/${roundId}`)
   revalidatePath(`/play/${roundId}`)
   return { success: true, roundId }
+}
+
+/** Delete an in-progress round without saving it as completed. */
+export async function cancelRound(roundId: string) {
+  const dbUser = await getDbUser()
+  if (!dbUser) {
+    return { error: 'You must be logged in' }
+  }
+
+  const round = await prisma.round.findUnique({ where: { id: roundId } })
+  if (!round || round.userId !== dbUser.id) {
+    return { error: 'Round not found' }
+  }
+
+  if (round.status !== 'IN_PROGRESS') {
+    return { error: 'Only in-progress rounds can be cancelled' }
+  }
+
+  try {
+    await prisma.round.delete({ where: { id: roundId } })
+  } catch (err) {
+    console.error('cancelRound failed:', err)
+    return { error: 'Could not cancel this round. Please try again.' }
+  }
+
+  revalidatePath('/')
+  revalidatePath(`/play/${roundId}`)
+  return { success: true }
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { finishRound, saveHole } from '@/app/actions/play'
+import CancelRoundButton from '@/components/CancelRoundButton'
 import HoleNavBar from '@/components/HoleNavBar'
 import HolePicker from '@/components/HolePicker'
 import HoleScoreCard from '@/components/HoleScoreCard'
@@ -49,6 +50,8 @@ type PlayRoundClientProps = {
   teeName: string | null
   holeCount: HoleCount
   initialHoles: HoleInput[]
+  /** Hole indices (0-based) already saved during this live round. */
+  initialSavedHoleIndices?: number[]
 }
 
 export default function PlayRoundClient({
@@ -57,11 +60,18 @@ export default function PlayRoundClient({
   teeName,
   holeCount,
   initialHoles,
+  initialSavedHoleIndices = [],
 }: PlayRoundClientProps) {
   const router = useRouter()
   const [holes, setHoles] = useState<HoleInput[]>(initialHoles)
   const [currentHole, setCurrentHole] = useState(() => loadStoredHole(roundId, holeCount))
-  const [completedHoles, setCompletedHoles] = useState<Set<number>>(() => loadCompletedHoles(roundId))
+  const [completedHoles, setCompletedHoles] = useState<Set<number>>(() => {
+    const merged = new Set(loadCompletedHoles(roundId))
+    for (const index of initialSavedHoleIndices) {
+      if (index >= 0 && index < holeCount) merged.add(index)
+    }
+    return merged
+  })
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -168,18 +178,21 @@ export default function PlayRoundClient({
 
   return (
     <div className="space-y-5 pb-36">
-      <div>
-        <Link
-          href="/"
-          className="text-sm font-semibold text-emerald-700 hover:text-emerald-900"
-        >
-          ← Dashboard
-        </Link>
-        <h1 className="text-xl font-bold mt-2 text-emerald-800">{courseName}</h1>
-        <p className="text-sm text-slate-500">
-          {teeName && `${teeName} tees · `}
-          {holeCount} holes · Live play
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Link
+            href="/"
+            className="text-sm font-semibold text-emerald-700 hover:text-emerald-900"
+          >
+            ← Dashboard
+          </Link>
+          <h1 className="text-xl font-bold mt-2 text-emerald-800">{courseName}</h1>
+          <p className="text-sm text-slate-500">
+            {teeName && `${teeName} tees · `}
+            {holeCount} holes · Live play
+          </p>
+        </div>
+        <CancelRoundButton roundId={roundId} />
       </div>
 
       {error && (
@@ -188,7 +201,7 @@ export default function PlayRoundClient({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div>
         <h2 className="text-lg font-bold text-slate-800">
           Hole {hole.holeNumber}
           <span className="ml-2 text-sm font-normal text-slate-500">
@@ -196,25 +209,19 @@ export default function PlayRoundClient({
             {hole.yardage != null ? ` · ${hole.yardage} yds` : ''}
           </span>
         </h2>
-        <button
-          type="button"
-          onClick={() => setPickerOpen((o) => !o)}
-          className="text-sm font-semibold text-emerald-700 min-h-11 px-2 touch-manipulation"
-        >
-          {currentHole + 1} / {holeCount}
-        </button>
       </div>
 
-      {pickerOpen && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:hidden">
-          <HolePicker
-            holeCount={holeCount}
-            currentHole={currentHole}
-            completedHoles={completedHoles}
-            onSelect={goToHole}
-          />
-        </div>
-      )}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">
+          Jump to hole
+        </p>
+        <HolePicker
+          holeCount={holeCount}
+          currentHole={currentHole}
+          completedHoles={completedHoles}
+          onSelect={goToHole}
+        />
+      </div>
 
       <HoleScoreCard hole={hole} onUpdate={(patch) => updateHole(currentHole, patch)} />
 

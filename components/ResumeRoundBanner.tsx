@@ -1,3 +1,4 @@
+import CancelRoundButton from '@/components/CancelRoundButton'
 import Link from 'next/link'
 
 type ResumeRoundBannerProps = {
@@ -37,12 +38,15 @@ export default function ResumeRoundBanner({ round }: ResumeRoundBannerProps) {
             )}
           </p>
         </div>
-        <Link
-          href={`/play/${round.id}`}
-          className="shrink-0 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 min-h-12 font-bold text-white hover:bg-emerald-700 touch-manipulation"
-        >
-          Resume round →
-        </Link>
+        <div className="flex flex-col sm:items-end gap-2 shrink-0">
+          <Link
+            href={`/play/${round.id}`}
+            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 min-h-12 font-bold text-white hover:bg-emerald-700 touch-manipulation"
+          >
+            Resume round →
+          </Link>
+          <CancelRoundButton roundId={round.id} variant="banner" />
+        </div>
       </div>
     </div>
   )

@@ -84,5 +84,8 @@ model Hole {
   upAndDownSuccess  Boolean?
   argProximity      Int?
 
+  // Set true when the player saves hole stats during live play
+  touched           Boolean           @default(false)
+
   @@unique([roundId, holeNumber])
 }

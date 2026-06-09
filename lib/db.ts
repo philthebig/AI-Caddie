@@ -5,7 +5,12 @@ import { PrismaPg } from '@prisma/adapter-pg'
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
 // 2. Set up the Prisma 7 adapter just like our test script
-const connectionString = process.env.DATABASE_URL!
+const connectionString = process.env.DATABASE_URL
+if (!connectionString) {
+  throw new Error(
+    "DATABASE_URL is not set. Add it to .env.local and restart the dev server."
+  )
+}
 const adapter = new PrismaPg({ connectionString })
 
 // 3. Create the Prisma instance ONLY if one doesn't already exist

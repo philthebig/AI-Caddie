@@ -1,8 +1,14 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-// 1. Industry Standard: Load the .env file using Node 22's native feature
-process.loadEnvFile()
+// 1. Load env files (Next.js uses .env.local; Prisma CLI uses both)
+for (const file of ['.env.local', '.env']) {
+  try {
+    process.loadEnvFile(file)
+  } catch {
+    // optional
+  }
+}
 
 // 2. Prisma 7 Requirement: Create a Postgres adapter using your direct URL
 const connectionString = process.env.DATABASE_URL

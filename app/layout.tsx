@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { ClerkProvider, UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs'
-import Logo from '@/components/Logo'
+import { ClerkProvider } from '@clerk/nextjs'
+import ConditionalAppHeader from '@/components/ConditionalAppHeader'
 import PwaProvider from '@/components/PwaProvider'
 import './globals.css'
 
@@ -55,15 +55,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-3 py-1 flex justify-between items-center safe-top h-11 sm:h-12">
-            <Logo priority />
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-            <SignedOut>
-              <SignInButton />
-            </SignedOut>
-          </header>
+          <ConditionalAppHeader />
 
           {children}
           <PwaProvider />

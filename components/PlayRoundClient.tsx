@@ -3,10 +3,9 @@
 import { finishRound, saveHole } from '@/app/actions/play'
 import CancelRoundButton from '@/components/CancelRoundButton'
 import HoleNavBar from '@/components/HoleNavBar'
-import HolePicker from '@/components/HolePicker'
 import HoleScoreCard from '@/components/HoleScoreCard'
+import PlayRoundHeader from '@/components/PlayRoundHeader'
 import type { HoleCount, HoleInput } from '@/lib/types/golf'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -116,6 +115,7 @@ export default function PlayRoundClient({
       next[index] = current
       return next
     })
+    setError(null)
   }, [])
 
   async function persistCurrentHole() {
@@ -128,6 +128,7 @@ export default function PlayRoundClient({
   }
 
   async function handleNext() {
+    if (saving) return
     const result = await persistCurrentHole()
     if (result?.error) {
       setError(result.error)
@@ -140,6 +141,7 @@ export default function PlayRoundClient({
   }
 
   async function handleFinish() {
+    if (saving) return
     const saveResult = await persistCurrentHole()
     if (saveResult?.error) {
       setError(saveResult.error)
@@ -164,66 +166,56 @@ export default function PlayRoundClient({
   function goToHole(index: number) {
     setCurrentHole(index)
     setPickerOpen(false)
+    setError(null)
   }
 
   function goPrevHole() {
     if (currentHole > 0) setCurrentHole((h) => h - 1)
+    setError(null)
   }
 
   if (!hole) {
     return (
-      <p className="text-sm text-slate-500">No hole data for this round.</p>
+      <p className="px-4 py-8 text-sm text-slate-500">No hole data for this round.</p>
     )
   }
 
   return (
-    <div className="space-y-5 pb-36">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <Link
-            href="/"
-            className="text-sm font-semibold text-emerald-700 hover:text-emerald-900"
+    <div className="flex min-h-dvh flex-col">
+      <PlayRoundHeader
+        courseName={courseName}
+        teeName={teeName}
+        currentHole={hole}
+        holes={activeHoles}
+        currentHoleIndex={currentHole}
+        saving={saving}
+      />
+
+      <div className="flex-1 px-4 sm:px-6 pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] space-y-4">
+        {error && (
+          <div
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start justify-between gap-3"
+            role="alert"
+            aria-live="assertive"
           >
-            ← Dashboard
-          </Link>
-          <h1 className="text-xl font-bold mt-2 text-emerald-800">{courseName}</h1>
-          <p className="text-sm text-slate-500">
-            {teeName && `${teeName} tees · `}
-            {holeCount} holes · Live play
-          </p>
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="shrink-0 min-h-8 min-w-8 rounded-lg text-red-600 hover:bg-red-100 font-bold touch-manipulation"
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <HoleScoreCard hole={hole} onUpdate={(patch) => updateHole(currentHole, patch)} />
+
+        <div className="pt-2 border-t border-slate-200">
+          <CancelRoundButton roundId={roundId} />
         </div>
-        <CancelRoundButton roundId={roundId} />
       </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      <div>
-        <h2 className="text-lg font-bold text-slate-800">
-          Hole {hole.holeNumber}
-          <span className="ml-2 text-sm font-normal text-slate-500">
-            Par {hole.par ?? 4}
-            {hole.yardage != null ? ` · ${hole.yardage} yds` : ''}
-          </span>
-        </h2>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">
-          Jump to hole
-        </p>
-        <HolePicker
-          holeCount={holeCount}
-          currentHole={currentHole}
-          completedHoles={completedHoles}
-          onSelect={goToHole}
-        />
-      </div>
-
-      <HoleScoreCard hole={hole} onUpdate={(patch) => updateHole(currentHole, patch)} />
 
       <HoleNavBar
         currentHole={currentHole}
@@ -235,13 +227,8 @@ export default function PlayRoundClient({
         onReview={handleFinish}
         pickerOpen={pickerOpen}
         onTogglePicker={() => setPickerOpen((o) => !o)}
+        disabled={saving}
       />
-
-      {saving && (
-        <p className="text-center text-sm text-slate-500" aria-live="polite">
-          Saving…
-        </p>
-      )}
     </div>
   )
 }

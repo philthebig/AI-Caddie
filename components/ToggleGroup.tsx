@@ -4,6 +4,7 @@ type ToggleGroupProps<T extends string> = {
   value: T | null
   onChange: (value: T) => void
   labels?: Partial<Record<T, string>>
+  large?: boolean
 }
 
 export default function ToggleGroup<T extends string>({
@@ -12,6 +13,7 @@ export default function ToggleGroup<T extends string>({
   value,
   onChange,
   labels,
+  large = false,
 }: ToggleGroupProps<T>) {
   const gridCols =
     options.length >= 4
@@ -36,7 +38,7 @@ export default function ToggleGroup<T extends string>({
               type="button"
               aria-pressed={active}
               onClick={() => onChange(option)}
-              className={`min-h-12 sm:min-h-11 rounded-xl border px-3 py-3 text-sm font-semibold transition touch-manipulation select-none active:scale-[0.97] ${
+              className={`${large ? 'min-h-14 text-base' : 'min-h-12 sm:min-h-11 text-sm'} rounded-xl border px-3 py-3 font-semibold transition touch-manipulation select-none active:scale-[0.97] ${
                 active
                   ? 'border-emerald-600 bg-emerald-600 text-white shadow-md ring-2 ring-emerald-600/30'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 active:bg-slate-50'

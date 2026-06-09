@@ -41,17 +41,15 @@ export default async function PlayRoundPage({ params }: PageProps) {
     .map((hole) => hole.holeNumber - 1)
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-8 font-sans text-slate-900 pb-24">
-      <div className="max-w-2xl mx-auto">
-        <PlayRoundClient
-          roundId={round.id}
-          courseName={round.courseName}
-          teeName={round.teeName}
-          holeCount={round.holeCount as HoleCount}
-          initialHoles={initialHoles}
-          initialSavedHoleIndices={initialSavedHoleIndices}
-        />
-      </div>
+    <main className="mx-auto max-w-2xl w-full">
+      <PlayRoundClient
+        roundId={round.id}
+        courseName={round.courseName}
+        teeName={round.teeName}
+        holeCount={round.holeCount as HoleCount}
+        initialHoles={initialHoles}
+        initialSavedHoleIndices={initialSavedHoleIndices}
+      />
     </main>
   )
 }

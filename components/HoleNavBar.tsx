@@ -12,6 +12,7 @@ type HoleNavBarProps = {
   onReview?: () => void
   pickerOpen: boolean
   onTogglePicker: () => void
+  disabled?: boolean
 }
 
 export default function HoleNavBar({
@@ -24,6 +25,7 @@ export default function HoleNavBar({
   onReview,
   pickerOpen,
   onTogglePicker,
+  disabled = false,
 }: HoleNavBarProps) {
   const isFirst = currentHole === 0
   const isLast = currentHole === holeCount - 1
@@ -53,7 +55,7 @@ export default function HoleNavBar({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={isFirst}
+            disabled={isFirst || disabled}
             onClick={onPrev}
             className="shrink-0 min-h-12 px-4 rounded-xl border border-slate-300 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-30 touch-manipulation"
           >
@@ -62,6 +64,7 @@ export default function HoleNavBar({
 
           <button
             type="button"
+            disabled={disabled}
             onClick={onTogglePicker}
             className="flex-1 min-h-12 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-800 font-black text-base touch-manipulation"
             aria-expanded={pickerOpen}
@@ -75,18 +78,20 @@ export default function HoleNavBar({
           {isLast ? (
             <button
               type="button"
+              disabled={disabled}
               onClick={onReview}
-              className="shrink-0 min-h-12 px-4 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 touch-manipulation"
+              className="shrink-0 min-h-12 px-4 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 touch-manipulation"
             >
-              Review
+              {disabled ? 'Saving…' : 'Finish'}
             </button>
           ) : (
             <button
               type="button"
+              disabled={disabled}
               onClick={onNext}
-              className="shrink-0 min-h-12 px-4 rounded-xl border border-slate-300 text-sm font-bold text-slate-700 hover:bg-slate-50 touch-manipulation"
+              className="shrink-0 min-h-12 px-4 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 touch-manipulation"
             >
-              #{currentHole + 2} &gt;
+              {disabled ? 'Saving…' : `#${currentHole + 2} →`}
             </button>
           )}
         </div>

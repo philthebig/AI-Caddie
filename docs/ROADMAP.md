@@ -96,7 +96,7 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 | Sub-phase | Goal | Status | Notes |
 |-----------|------|--------|-------|
 | 6a | Live play mode | ✅ | `IN_PROGRESS` rounds, `/play/[id]`, `saveHole` per hole |
-| 6b | Play UI polish | ⬜ | Running totals, full-screen layout, auto-advance |
+| 6b | Play UI polish | ✅ | Running totals, full-screen layout, auto-advance |
 | 6c | GPS + distance | ⬜ | `useGeolocation`, yardage + rough GPS readout |
 | 6d | Map view | ⬜ | Leaflet or Mapbox on play screen |
 | 6e | Offline sync | ⬜ | IndexedDB queue for spotty cell |

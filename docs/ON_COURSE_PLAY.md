@@ -141,7 +141,7 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 ---
 
-## Phase 6b — Play UI polish ⬜
+## Phase 6b — Play UI polish ✅
 
 **Goal:** Full-screen on-course experience with running totals and cleaner layout.
 
@@ -166,10 +166,12 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 ### Acceptance criteria
 
-- [ ] Play screen feels like a dedicated app view, not a form embedded in the dashboard.
-- [ ] Running score visible while entering any hole.
-- [ ] Saving a hole auto-advances to the next (with manual back still available).
-- [ ] Works on mobile viewport (375px); bottom nav not obscured by browser chrome (safe areas).
+- [x] Play screen feels like a dedicated app view, not a form embedded in the dashboard.
+- [x] Running score visible while entering any hole.
+- [x] Saving a hole auto-advances to the next (with manual back still available).
+- [x] Works on mobile viewport (375px); bottom nav not obscured by browser chrome (safe areas).
+
+**PWA note:** `manifest.json` `start_url` remains `/` so installed apps land on the dashboard with the resume banner for in-progress rounds.
 
 ### Out of scope
 
@@ -387,7 +389,7 @@ model CourseGpsCache {
 | Phase | Goal | Status |
 |-------|------|--------|
 | 6a | Live play mode | ✅ |
-| 6b | Play UI polish | ⬜ |
+| 6b | Play UI polish | ✅ |
 | 6c | GPS + distance display | ⬜ |
 | 6d | Map view | ⬜ |
 | 6e | Offline sync | ⬜ |

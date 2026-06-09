@@ -1,5 +1,5 @@
 import {
-  courseDetailSchema,
+  courseDetailResponseSchema,
   courseSearchResponseSchema,
   type CourseDetail,
   type CourseSearchResult,
@@ -77,13 +77,13 @@ export async function searchCourses(query: string): Promise<CourseSearchResult[]
 
 export async function getCourseById(id: number): Promise<CourseDetail> {
   const data = await golfCourseFetch<unknown>(`/v1/courses/${id}`)
-  const parsed = courseDetailSchema.safeParse(data)
+  const parsed = courseDetailResponseSchema.safeParse(data)
 
   if (!parsed.success) {
     throw new GolfCourseApiError('Unexpected course detail response from golf course API', 502)
   }
 
-  return parsed.data
+  return 'course' in parsed.data ? parsed.data.course : parsed.data
 }
 
 export function isGolfCourseApiConfigured() {

@@ -6,6 +6,8 @@ export const courseLocationSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   country: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 })
 
 export const courseSearchResultSchema = z.object({
@@ -20,8 +22,8 @@ export const courseSearchResponseSchema = z.object({
 })
 
 export const apiHoleSchema = z.object({
-  par: z.number().int().min(3).max(5),
-  yardage: z.number().int().min(50).max(700),
+  par: z.number().int().min(3).max(6),
+  yardage: z.number().int().min(1).max(800),
   hole_number: z.number().int().min(1).max(18).optional(),
   par_number: z.number().int().min(1).max(18).optional(),
   handicap: z.number().int().optional(),
@@ -41,11 +43,22 @@ export const courseDetailSchema = z.object({
   club_name: z.string(),
   course_name: z.string(),
   location: courseLocationSchema.optional(),
-  tees: z.object({
-    male: z.array(apiTeeSchema).default([]),
-    female: z.array(apiTeeSchema).default([]),
-  }),
+  tees: z
+    .object({
+      male: z.array(apiTeeSchema).optional(),
+      female: z.array(apiTeeSchema).optional(),
+    })
+    .optional()
+    .transform((tees) => ({
+      male: tees?.male ?? [],
+      female: tees?.female ?? [],
+    })),
 })
+
+export const courseDetailResponseSchema = z.union([
+  courseDetailSchema,
+  z.object({ course: courseDetailSchema }),
+])
 
 export type CourseSearchResult = z.infer<typeof courseSearchResultSchema>
 export type CourseDetail = z.infer<typeof courseDetailSchema>

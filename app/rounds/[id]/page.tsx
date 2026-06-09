@@ -1,4 +1,6 @@
 import AICoachButton from '@/components/AICoachButton'
+import DeleteRoundButton from '@/components/DeleteRoundButton'
+import HolePickerLinks from '@/components/HolePickerLinks'
 import StatPill from '@/components/StatPill'
 import { getDbUser } from '@/lib/auth'
 import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
@@ -57,20 +59,30 @@ export default async function RoundDetailPage({ params }: PageProps) {
           ← Dashboard
         </Link>
 
-        <header className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-800">
-            {round.courseName}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {new Date(round.date).toLocaleDateString(undefined, {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-            {round.teeName && <span> · {round.teeName} tees</span>}
-            {aggregates.coursePar != null && <span> · Par {aggregates.coursePar}</span>}
-          </p>
+        <header className="space-y-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-800">
+              {round.courseName}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {new Date(round.date).toLocaleDateString(undefined, {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+              {round.teeName && <span> · {round.teeName} tees</span>}
+              {aggregates.coursePar != null && <span> · Par {aggregates.coursePar}</span>}
+            </p>
+          </div>
+          {round.holes.length > 0 && (
+            <Link
+              href={`/rounds/${round.id}/edit`}
+              className="inline-flex min-h-11 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800 hover:bg-emerald-100 touch-manipulation"
+            >
+              Edit round
+            </Link>
+          )}
         </header>
 
         <div className="flex items-center gap-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
@@ -137,7 +149,15 @@ export default async function RoundDetailPage({ params }: PageProps) {
 
         {round.holes.length > 0 ? (
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-800">Hole by hole</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-slate-800">Hole by hole</h2>
+              <p className="text-xs text-slate-400">Tap to edit</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <HolePickerLinks roundId={round.id} holeCount={holeCount} />
+            </div>
+
             <div className="space-y-2">
               {round.holes.map((hole) => {
                 const par = hole.par ?? 4
@@ -146,9 +166,10 @@ export default async function RoundDetailPage({ params }: PageProps) {
                   vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar)
 
                 return (
-                  <div
+                  <Link
                     key={hole.id}
-                    className="bg-white rounded-xl border border-slate-200 p-4 flex gap-3 items-start"
+                    href={`/rounds/${round.id}/edit?hole=${hole.holeNumber}`}
+                    className="block bg-white rounded-xl border border-slate-200 p-4 flex gap-3 items-start hover:border-emerald-300 active:scale-[0.99] transition touch-manipulation"
                   >
                     <div className="shrink-0 w-10 text-center">
                       <div className="text-xs font-bold text-slate-400">H{hole.holeNumber}</div>
@@ -193,7 +214,10 @@ export default async function RoundDetailPage({ params }: PageProps) {
                         )}
                       </div>
                     </div>
-                  </div>
+                    <span className="text-emerald-600 text-sm font-bold shrink-0 self-center">
+                      Edit
+                    </span>
+                  </Link>
                 )
               })}
             </div>
@@ -215,6 +239,10 @@ export default async function RoundDetailPage({ params }: PageProps) {
           ) : (
             <AICoachButton roundId={round.id} />
           )}
+        </section>
+
+        <section className="pt-2">
+          <DeleteRoundButton roundId={round.id} />
         </section>
       </div>
     </main>

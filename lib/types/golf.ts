@@ -147,6 +147,50 @@ export function emptyHole(holeNumber: number, par = 4): HoleInput {
   }
 }
 
+export type RoundFormEditData = {
+  roundId: string
+  courseName: string
+  externalCourseId: number | null
+  teeName: string | null
+  holeCount: HoleCount
+  holes: HoleInput[]
+  startHole?: number
+}
+
+type DbHoleLike = {
+  holeNumber: number
+  par: number | null
+  yardage: number | null
+  score: number
+  putts: number
+  penaltyStrokes: number
+  ottMissDirection: HoleInput['ottMissDirection']
+  gir: boolean
+  appMissDirection: HoleInput['appMissDirection']
+  approachProximity: number | null
+  upAndDownAttempt: boolean | null
+  upAndDownSuccess: boolean | null
+  argProximity: number | null
+}
+
+export function holeInputFromDb(hole: DbHoleLike): HoleInput {
+  return {
+    holeNumber: hole.holeNumber,
+    par: hole.par ?? undefined,
+    yardage: hole.yardage ?? undefined,
+    score: hole.score,
+    putts: hole.putts,
+    penaltyStrokes: hole.penaltyStrokes,
+    ottMissDirection: hole.ottMissDirection,
+    gir: hole.gir,
+    appMissDirection: hole.appMissDirection,
+    approachProximity: hole.approachProximity,
+    upAndDownAttempt: hole.upAndDownAttempt,
+    upAndDownSuccess: hole.upAndDownSuccess,
+    argProximity: hole.argProximity,
+  }
+}
+
 /** Fill in defaults so untouched form state still passes validation. */
 export function normalizeHoles(holes: HoleInput[]): HoleInput[] {
   return holes.map((hole) => {

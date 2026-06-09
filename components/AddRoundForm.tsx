@@ -1,7 +1,9 @@
 'use client'
 
-import { createRound } from '@/app/actions'
+import { createRound, updateRound } from '@/app/actions'
 import CourseSearch, { type CourseSearchSelection } from '@/components/CourseSearch'
+import HoleNavBar from '@/components/HoleNavBar'
+import HolePicker from '@/components/HolePicker'
 import ToggleGroup from '@/components/ToggleGroup'
 import {
   APP_MISS_DIRECTIONS,
@@ -10,8 +12,11 @@ import {
   type CreateRoundErrorDetails,
   type HoleCount,
   type HoleInput,
+  type RoundFormEditData,
 } from '@/lib/types/golf'
 import type { NineSide } from '@/lib/types/course'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 const DEFAULT_PARS_18 = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4]
@@ -36,19 +41,36 @@ function ToggleYesNo({
   )
 }
 
-export default function AddRoundForm() {
+type AddRoundFormProps = {
+  edit?: RoundFormEditData
+}
+
+export default function AddRoundForm({ edit }: AddRoundFormProps) {
+  const router = useRouter()
+  const isEdit = edit != null
   const formRef = useRef<HTMLFormElement>(null)
-  const [step, setStep] = useState<'setup' | 'holes' | 'review'>('setup')
-  const [courseName, setCourseName] = useState('')
-  const [externalCourseId, setExternalCourseId] = useState<number | null>(null)
-  const [teeName, setTeeName] = useState<string | null>(null)
-  const [nineSide, setNineSide] = useState<NineSide>('front')
-  const [holeCount, setHoleCount] = useState<HoleCount>(18)
-  const [showCourseDetails, setShowCourseDetails] = useState(false)
-  const [currentHole, setCurrentHole] = useState(0)
-  const [holes, setHoles] = useState<HoleInput[]>(() =>
-    DEFAULT_PARS_18.map((par, i) => emptyHole(i + 1, par))
+  const [step, setStep] = useState<'setup' | 'holes' | 'review'>(isEdit ? 'holes' : 'setup')
+  const [courseName, setCourseName] = useState(edit?.courseName ?? '')
+  const [externalCourseId, setExternalCourseId] = useState<number | null>(
+    edit?.externalCourseId ?? null
   )
+  const [teeName, setTeeName] = useState<string | null>(edit?.teeName ?? null)
+  const [nineSide, setNineSide] = useState<NineSide>('front')
+  const [holeCount, setHoleCount] = useState<HoleCount>(edit?.holeCount ?? 18)
+  const [showCourseDetails, setShowCourseDetails] = useState(isEdit)
+  const [currentHole, setCurrentHole] = useState(() => {
+    const start = edit?.startHole ?? 0
+    const max = (edit?.holeCount ?? 18) - 1
+    return Math.min(Math.max(start, 0), max)
+  })
+  const [holes, setHoles] = useState<HoleInput[]>(() =>
+    edit?.holes ?? DEFAULT_PARS_18.map((par, i) => emptyHole(i + 1, par))
+  )
+  const [completedHoles, setCompletedHoles] = useState<Set<number>>(() => {
+    if (!edit) return new Set()
+    return new Set(Array.from({ length: edit.holeCount }, (_, i) => i))
+  })
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -157,6 +179,33 @@ export default function AddRoundForm() {
     updateHole(index, field === 'par' ? { par: value } : { yardage: value })
   }
 
+  function markHoleComplete(index: number) {
+    setCompletedHoles((prev) => new Set(prev).add(index))
+  }
+
+  function goToHole(index: number) {
+    setCurrentHole(index)
+    setStep('holes')
+    setPickerOpen(false)
+  }
+
+  function goPrevHole() {
+    if (currentHole > 0) setCurrentHole((h) => h - 1)
+  }
+
+  function goNextHole() {
+    markHoleComplete(currentHole)
+    if (currentHole < holeCount - 1) {
+      setCurrentHole((h) => h + 1)
+    }
+  }
+
+  function goToReview() {
+    markHoleComplete(currentHole)
+    setStep('review')
+    setPickerOpen(false)
+  }
+
   async function handleSubmit(formData: FormData) {
     setSubmitting(true)
     setError(null)
@@ -169,22 +218,32 @@ export default function AddRoundForm() {
     formData.set('holesJson', JSON.stringify(payload))
     formData.set('coursePar', String(coursePar))
     formData.set('courseName', courseName)
+    formData.set('holeCount', String(holeCount))
     if (externalCourseId != null) {
       formData.set('externalCourseId', String(externalCourseId))
     }
     if (teeName) {
       formData.set('teeName', teeName)
     }
-    const result = await createRound(formData)
+
+    const result = isEdit
+      ? await updateRound(edit.roundId, formData)
+      : await createRound(formData)
     setSubmitting(false)
 
     if (result?.error) {
-      applySubmitErrors(result.error, result.details)
+      applySubmitErrors(result.error, 'details' in result ? result.details : undefined)
       return
     }
 
-    if (!result?.success) {
+    if (!result || !('success' in result) || !result.success) {
       applySubmitErrors('Something went wrong. Please try again.')
+      return
+    }
+
+    if (isEdit && edit) {
+      router.push(`/rounds/${edit.roundId}`)
+      router.refresh()
       return
     }
 
@@ -196,8 +255,10 @@ export default function AddRoundForm() {
     setHoleCount(18)
     setShowCourseDetails(false)
     setCurrentHole(0)
+    setCompletedHoles(new Set())
     setHoles(DEFAULT_PARS_18.map((par, i) => emptyHole(i + 1, par)))
     setStep('setup')
+    router.refresh()
   }
 
   const hole = activeHoles[currentHole]
@@ -206,10 +267,28 @@ export default function AddRoundForm() {
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200">
-      <h3 className="text-xl font-bold mb-1 text-emerald-800">Log a New Round</h3>
-      <p className="text-sm text-slate-500 mb-4">
-        Search a real course for par and yardages, then log hole-by-hole stats.
-      </p>
+      {isEdit && edit ? (
+        <div className="mb-4">
+          <Link
+            href={`/rounds/${edit.roundId}`}
+            className="text-sm font-semibold text-emerald-700 hover:text-emerald-900"
+          >
+            ← Back to round
+          </Link>
+          <h3 className="text-xl font-bold mt-2 text-emerald-800">Edit round</h3>
+          <p className="text-sm text-slate-500">
+            {courseName}
+            {teeName && ` · ${teeName} tees`} · {holeCount} holes
+          </p>
+        </div>
+      ) : (
+        <>
+          <h3 className="text-xl font-bold mb-1 text-emerald-800">Log a New Round</h3>
+          <p className="text-sm text-slate-500 mb-4">
+            Search a real course for par and yardages, then log hole-by-hole stats.
+          </p>
+        </>
+      )}
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -234,7 +313,7 @@ export default function AddRoundForm() {
         )}
         {teeName && <input type="hidden" name="teeName" value={teeName} />}
 
-        {step === 'setup' && (
+        {step === 'setup' && !isEdit && (
           <div className="space-y-4">
             <CourseSearch
               holeCount={holeCount}
@@ -346,7 +425,7 @@ export default function AddRoundForm() {
         )}
 
         {step === 'holes' && hole && (
-          <div className="space-y-5">
+          <div className="space-y-5 pb-36">
             <div className="flex items-center justify-between">
               <h4 className="text-lg font-bold text-slate-800">
                 Hole {hole.holeNumber}
@@ -355,10 +434,25 @@ export default function AddRoundForm() {
                   {hole.yardage != null ? ` · ${hole.yardage} yds` : ''}
                 </span>
               </h4>
-              <span className="text-sm text-slate-400">
+              <button
+                type="button"
+                onClick={() => setPickerOpen((o) => !o)}
+                className="text-sm font-semibold text-emerald-700 min-h-11 px-2 touch-manipulation"
+              >
                 {currentHole + 1} / {holeCount}
-              </span>
+              </button>
             </div>
+
+            {pickerOpen && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:hidden">
+                <HolePicker
+                  holeCount={holeCount}
+                  currentHole={currentHole}
+                  completedHoles={completedHoles}
+                  onSelect={goToHole}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -497,41 +591,27 @@ export default function AddRoundForm() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            {!isEdit && (
               <button
                 type="button"
-                disabled={currentHole === 0}
-                onClick={() => setCurrentHole((h) => h - 1)}
-                className="flex-1 rounded-xl border border-slate-300 py-3.5 min-h-12 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 touch-manipulation"
+                onClick={() => setStep('setup')}
+                className="text-sm text-slate-500 hover:text-slate-700 min-h-11"
               >
-                ← Previous
+                ← Back to setup
               </button>
-              {currentHole < holeCount - 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrentHole((h) => h + 1)}
-                  className="flex-1 rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 touch-manipulation"
-                >
-                  Next hole →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setStep('review')}
-                  className="flex-1 rounded-xl bg-emerald-600 py-3.5 min-h-12 font-bold text-white hover:bg-emerald-700 touch-manipulation"
-                >
-                  Review round →
-                </button>
-              )}
-            </div>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setStep('setup')}
-              className="text-sm text-slate-500 hover:text-slate-700"
-            >
-              ← Back to setup
-            </button>
+            <HoleNavBar
+              currentHole={currentHole}
+              holeCount={holeCount}
+              completedHoles={completedHoles}
+              onSelectHole={goToHole}
+              onPrev={goPrevHole}
+              onNext={goNextHole}
+              onReview={goToReview}
+              pickerOpen={pickerOpen}
+              onTogglePicker={() => setPickerOpen((o) => !o)}
+            />
           </div>
         )}
 
@@ -557,9 +637,31 @@ export default function AddRoundForm() {
               </p>
             </div>
 
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100 text-sm">
-              {activeHoles.map((h) => (
-                <div key={h.holeNumber} className="flex justify-between px-3 py-2">
+            <div className="rounded-lg border border-slate-200 p-3 bg-slate-50">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">
+                Tap a hole to edit
+              </p>
+              <HolePicker
+                holeCount={holeCount}
+                currentHole={currentHole}
+                completedHoles={
+                  new Set(Array.from({ length: holeCount }, (_, i) => i))
+                }
+                onSelect={(i) => {
+                  setStep('holes')
+                  goToHole(i)
+                }}
+              />
+            </div>
+
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100 text-sm">
+              {activeHoles.map((h, i) => (
+                <button
+                  key={h.holeNumber}
+                  type="button"
+                  onClick={() => goToHole(i)}
+                  className="flex w-full justify-between px-3 py-2.5 hover:bg-slate-50 text-left touch-manipulation"
+                >
                   <span>
                     H{h.holeNumber} (par {h.par ?? 4}
                     {h.yardage != null ? `, ${h.yardage} yds` : ''})
@@ -568,7 +670,7 @@ export default function AddRoundForm() {
                     {h.score} · {h.putts}p
                     {h.gir ? ' · GIR' : ` · ${h.appMissDirection}`}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
 
@@ -588,7 +690,7 @@ export default function AddRoundForm() {
                 disabled={submitting}
                 className="flex-1 rounded-md bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
               >
-                {submitting ? 'Saving…' : 'Save round ⛳'}
+                {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save round ⛳'}
               </button>
             </div>
           </div>

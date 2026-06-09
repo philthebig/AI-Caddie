@@ -7,12 +7,13 @@ export default function AICoachButton({ roundId }: { roundId: string }) {
   const router = useRouter();
 
   // The Vercel AI SDK Hook
-  const { complete, completion, isLoading } = useCompletion({
-    api: '/api/coach', // Points to our new route
+  const { complete, completion, isLoading, error } = useCompletion({
+    api: '/api/coach',
+    // Must match the API's toTextStreamResponse() — default is data stream protocol
+    streamProtocol: 'text',
     onFinish: () => {
-      // When the stream is totally done, refresh the page data
-      // so the new advice is permanently shown from the database.
-      router.refresh(); 
+      // Refresh after DB save in the API route's onFinish has time to complete
+      setTimeout(() => router.refresh(), 500);
     },
   });
 
@@ -31,6 +32,22 @@ export default function AICoachButton({ roundId }: { roundId: string }) {
         <p className="text-indigo-800 text-sm leading-relaxed animate-pulse-text">
           {completion}
         </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+        <p className="text-sm text-red-800">
+          Failed to generate feedback. Please try again.
+        </p>
+        <button
+          onClick={handleClick}
+          className="mt-2 text-sm font-medium text-red-700 underline"
+        >
+          Retry
+        </button>
       </div>
     );
   }

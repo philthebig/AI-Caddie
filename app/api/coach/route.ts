@@ -1,5 +1,6 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 
 // Allow streaming responses up to 30 seconds
@@ -15,7 +16,9 @@ export async function POST(req: Request) {
     include: { user: true }
   });
 
-  if (!round) throw new Error('Round not found');
+  if (!round) {
+    return Response.json({ error: 'Round not found' }, { status: 404 });
+  }
 
   // 3. Define the Prompt
   const prompt = `
@@ -44,6 +47,7 @@ export async function POST(req: Request) {
         where: { id: roundId },
         data: { aiFeedback: text },
       });
+      revalidatePath('/');
     },
   });
 

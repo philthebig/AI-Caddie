@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "prisma generate && next dev",
     "db:dev": "prisma dev --detach --name ai-caddie",
     "db:migrate": "prisma migrate deploy",
     "build": "prisma generate && next build",

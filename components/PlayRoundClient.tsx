@@ -1,7 +1,9 @@
 'use client'
 
+import { fetchCourseGpsForRound } from '@/app/actions/course-gps'
 import { finishRound } from '@/app/actions/play'
 import CancelRoundButton from '@/components/CancelRoundButton'
+import CourseGpsCalibration from '@/components/CourseGpsCalibration'
 import DistanceReadout from '@/components/DistanceReadout'
 import HoleNavBar from '@/components/HoleNavBar'
 import HoleScoreCard from '@/components/HoleScoreCard'
@@ -11,6 +13,7 @@ import PlayRoundHeader from '@/components/PlayRoundHeader'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useHoleSync } from '@/hooks/useHoleSync'
 import type { QueuedHole } from '@/lib/offline/hole-queue'
+import type { CourseGpsPayload, GpsSource } from '@/lib/golf-course-gps/types'
 import type { HoleCount, HoleInput } from '@/lib/types/golf'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -71,6 +74,8 @@ type PlayRoundClientProps = {
   initialHoles: HoleInput[]
   /** Hole indices (0-based) already saved during this live round. */
   initialSavedHoleIndices?: number[]
+  initialCourseGps?: CourseGpsPayload | null
+  initialGpsSource?: GpsSource | null
 }
 
 export default function PlayRoundClient({
@@ -82,6 +87,8 @@ export default function PlayRoundClient({
   holeCount,
   initialHoles,
   initialSavedHoleIndices = [],
+  initialCourseGps = null,
+  initialGpsSource = null,
 }: PlayRoundClientProps) {
   const router = useRouter()
   const [holes, setHoles] = useState<HoleInput[]>(initialHoles)
@@ -97,6 +104,10 @@ export default function PlayRoundClient({
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [courseGps, setCourseGps] = useState<CourseGpsPayload | null>(initialCourseGps)
+  const [gpsSource, setGpsSource] = useState<GpsSource | null>(initialGpsSource)
+  const [calibrationOpen, setCalibrationOpen] = useState(false)
+  const [gpsRefreshing, setGpsRefreshing] = useState(false)
 
   const handleQueueHydrate = useCallback((queued: QueuedHole[]) => {
     if (queued.length === 0) return
@@ -112,6 +123,22 @@ export default function PlayRoundClient({
   }, [holeCount])
 
   const sync = useHoleSync({ roundId, onHydrate: handleQueueHydrate })
+
+  useEffect(() => {
+    if (initialCourseGps) return
+    let cancelled = false
+    ;(async () => {
+      const result = await fetchCourseGpsForRound(roundId, false)
+      if (cancelled || ('error' in result && result.error)) return
+      if (result.payload) {
+        setCourseGps(result.payload)
+        setGpsSource(result.source ?? result.payload.source)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [roundId, initialCourseGps])
 
   useEffect(() => {
     localStorage.setItem(playHoleStorageKey(roundId), String(currentHole))
@@ -142,7 +169,7 @@ export default function PlayRoundClient({
     Number.isFinite(courseLatitude) &&
     Number.isFinite(courseLongitude)
 
-  const geo = useGeolocation(hasCourseTarget)
+  const geo = useGeolocation(hasCourseTarget || courseGps != null)
 
   const updateHole = useCallback((index: number, patch: Partial<HoleInput>) => {
     setHoles((prev) => {
@@ -229,7 +256,7 @@ export default function PlayRoundClient({
     await sync.clearQueue()
     localStorage.removeItem(playHoleStorageKey(roundId))
     localStorage.removeItem(playCompletedStorageKey(roundId))
-    router.push(`/rounds/${roundId}`)
+    router.push(`/rounds/${roundId}?coach=1`)
     router.refresh()
   }
 
@@ -255,6 +282,18 @@ export default function PlayRoundClient({
     setError(null)
   }
 
+  async function handleRefreshGps() {
+    if (gpsRefreshing) return
+    setGpsRefreshing(true)
+    const result = await fetchCourseGpsForRound(roundId, true)
+    setGpsRefreshing(false)
+    if ('error' in result && result.error) return
+    if (result.payload) {
+      setCourseGps(result.payload)
+      setGpsSource(result.source ?? result.payload.source)
+    }
+  }
+
   if (!hole) {
     return (
       <p className="px-4 py-8 text-sm text-slate-500">No hole data for this round.</p>
@@ -278,6 +317,8 @@ export default function PlayRoundClient({
       <PlayMap
         courseLatitude={courseLatitude}
         courseLongitude={courseLongitude}
+        courseGps={courseGps}
+        currentHoleNumber={hole.holeNumber}
         geo={geo}
       />
 
@@ -309,10 +350,65 @@ export default function PlayRoundClient({
           </div>
         )}
 
+        {!courseGps && !calibrationOpen && (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              No hole GPS for this course yet. Try refreshing from OpenStreetMap or calibrate
+              on-site (works great for Le Algonquin).
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleRefreshGps}
+                disabled={gpsRefreshing}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 touch-manipulation min-h-10 disabled:opacity-50"
+              >
+                {gpsRefreshing ? 'Loading…' : 'Load from OSM'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalibrationOpen(true)}
+                className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 touch-manipulation min-h-10"
+              >
+                Calibrate on course
+              </button>
+            </div>
+          </div>
+        )}
+
+        {courseGps && !calibrationOpen && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setCalibrationOpen(true)}
+              className="text-xs font-semibold text-amber-800 hover:text-amber-950 touch-manipulation min-h-8"
+            >
+              Edit course GPS
+            </button>
+          </div>
+        )}
+
+        {calibrationOpen && (
+          <CourseGpsCalibration
+            roundId={roundId}
+            holeCount={holeCount}
+            initialPayload={courseGps}
+            geo={geo}
+            onSaved={(payload) => {
+              setCourseGps(payload)
+              setGpsSource(payload.source)
+            }}
+            onClose={() => setCalibrationOpen(false)}
+          />
+        )}
+
         <DistanceReadout
+          holeNumber={hole.holeNumber}
           holeYardage={hole.yardage}
           courseLatitude={courseLatitude}
           courseLongitude={courseLongitude}
+          courseGps={courseGps}
+          gpsSource={gpsSource}
           geo={geo}
         />
 

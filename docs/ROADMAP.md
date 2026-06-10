@@ -22,10 +22,10 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 | Single streaming paragraph, max ~4 sentences | Feels generic; no structure, no “why this hole” |
 | One weakness + one drill | Ignores second-order issues (e.g. OTT fine but APP short-sided every time) |
 | Single round only | No “you’ve missed right OTT in 4 of last 5 rounds” |
-| Raw miss counts in prompt | No segmentation by par, yardage, or proximity bands |
-| Stored once in `Round.aiFeedback` | No regenerate, no follow-up questions |
-| SG computed but hidden from user | Golfer never sees OTT/APP/ARG/PUTT breakdown — only the AI does |
-| On-course play (Phase 6) complete | **Zero coaching during or right after the round** — biggest missed moment |
+| Raw miss counts in prompt | ✅ Phase 2 — segmented by par, yardage, proximity, GIR |
+| Stored once in `Round.aiFeedback` | No regenerate; follow-up chat ✅ (Phase 8) but initial summary still one-shot |
+| SG on round detail only | Dashboard round cards still lack SG chips (Phase 5) |
+| Auto-coach on finish (Phase 7a) ✅ | No turn/hole tips yet; no coaching *during* the round |
 
 ### Coaching vision (target experience)
 
@@ -33,9 +33,9 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 2. **On the course** — After a blow-up hole or at the turn: one-line caddie note tied to live stats (“Third right miss OTT — club down, aim left edge today”).
 3. **Right after finish** — Auto-run coach; structured card (headline, strokes lost, evidence holes, drill, optional “ask a follow-up”).
 4. **Between rounds** — Dashboard “Practice focus” from last N rounds; trends + SG chips, not only score.
-5. **Conversation** — “Why did I struggle on the back nine?” / “What should I work on at the range Tuesday?”
+5. **Conversation** — ✅ Phase 8: follow-up chat on round detail with suggested prompts
 
-**Recommended build order:** Phases 2 → 4 → 5 (smarter data + UI) in parallel with **Phase 7a** (auto-coach on finish). Phase 3 (multi-round) unlocks the biggest “this knows me” jump. Phase 8 (chat) comes once payload is structured.
+**Recommended build order:** Phases **4 → 5 → 3** (structured coach UI, dashboard, multi-round insights) are the highest-impact next steps. Phase 2 ✅, Phase 7a ✅, and Phase 8 ✅ are done.
 
 ---
 
@@ -66,18 +66,18 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 
 ---
 
-## Phase 2 — Miss patterns (single round) ⬜ **Next priority**
+## Phase 2 — Miss patterns (single round) ✅
 
 **Goal:** Segmented tendencies the AI (and UI) can cite with evidence — not raw left/right totals.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `lib/golf-logic/miss-patterns.ts` | ⬜ | Direction × par × yardage buckets |
-| Short-sided APP flag | ⬜ | SHORT miss + high proximity → “short-sided” segment |
-| ARG save rate by proximity band | ⬜ | e.g. &lt;15 ft vs 15–30 ft vs 30+ ft |
-| Three-putt rate on GIR vs non-GIR | ⬜ | Separate putting leak from scrambling noise |
-| Blow-up hole detector | ⬜ | Holes ≥ +2 vs par with category attribution (OTT penalty vs APP vs PUTT) |
-| Export `MissPatternSummary` for coach + UI | ⬜ | Typed object, not only prose in `formatRoundForAI` |
+| `lib/golf-logic/miss-patterns.ts` | ✅ | Direction × par × yardage buckets |
+| Short-sided APP flag | ✅ | SHORT miss + proximity ≤30 ft → short-sided segment |
+| ARG save rate by proximity band | ✅ | &lt;15 ft vs 15–30 ft vs 30+ ft |
+| Three-putt rate on GIR vs non-GIR | ✅ | Separate putting leak from scrambling noise |
+| Blow-up hole detector | ✅ | Holes ≥ +2 vs par with SG category attribution |
+| Export `MissPatternSummary` for coach + UI | ✅ | `computeMissPatterns()` + `formatMissPatterns()` wired into `formatRoundForAI` |
 
 **Why first:** Cheap to build, immediately makes single-round coach prompts specific (“right OTT on 4 of 5 par 4s over 400y”).
 
@@ -136,9 +136,9 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | SG chips on dashboard round cards | ⬜ | OTT / APP / ARG / PUTT color-coded |
 | **Practice focus** banner on dashboard | ⬜ | Top insight from Phase 3 when ≥3 rounds |
 | Miss-pattern preview on review step | ⬜ | Before save / finish round |
-| Post-finish coach screen | ⬜ | `/rounds/[id]?coach=1` or dedicated step after `finishRound` |
+| Post-finish coach screen | ✅ | `/rounds/[id]?coach=1` auto-starts post-round stream (Phase 7a) |
 | Store handicap / skill index on `User` | ⬜ | Tune baselines + tone (“18 hcp” vs “single digit”) |
-| “Ask follow-up” entry point | ⬜ | Links to Phase 8; disabled until chat exists |
+| “Ask follow-up” entry point | ✅ | `CoachChat` on round detail (Phase 8) |
 
 ---
 
@@ -159,7 +159,7 @@ Also watch: 3 right OTT misses on par 4s > 400y
 
 ---
 
-## Phase 7 — On-course coaching ⬜ **New — use the play screen**
+## Phase 7 — On-course coaching 🚧 **7a done — turn/hole tips next**
 
 **Goal:** Coach feels present *during* the round, not only after you get home.
 
@@ -167,7 +167,7 @@ Also watch: 3 right OTT misses on par 4s > 400y
 
 | Sub-phase | Goal | Status | Notes |
 |-----------|------|--------|-------|
-| 7a | Auto-coach on `finishRound` | ⬜ | Trigger `/api/coach` after finish; land on coach card |
+| 7a | Auto-coach on `finishRound` | ✅ | Redirect to `/rounds/[id]?coach=1`; auto-starts coach stream |
 | 7b | Turn summary (holes 9 / 18) | ⬜ | Collapsible “Halfway check-in” — SG so far + one adjustment |
 | 7c | Hole micro-coach (optional) | ⬜ | After save on double+ or 3-putt: one-line tip from running patterns |
 | 7d | Pre-round game plan | ⬜ | If ≥3 prior rounds at same course: “Last time: missed left APP on 3, 7, 11” |
@@ -179,20 +179,24 @@ Also watch: 3 right OTT misses on par 4s > 400y
 
 ---
 
-## Phase 8 — Conversational caddie ⬜ **New**
+## Phase 8 — Conversational caddie ✅
 
 **Goal:** Follow-up questions and practice planning — coach as ongoing relationship.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `POST /api/coach/chat` | ⬜ | Thread per round or per user; stream responses |
-| `CoachMessage` model (optional) | ⬜ | Persist Q&A; or ephemeral with round context |
-| Context injection | ⬜ | Last round payload + Phase 3 insights + user handicap |
-| Suggested prompts | ⬜ | “Why the back nine?” “One range session plan?” “Club off tee on 7?” |
-| Rate limits / token budget | ⬜ | Cap messages per round/day |
-| Deprecate duplicate `generateFeedback` | ⬜ | Single coach entry point |
+| `POST /api/coach/chat` | ✅ | Per-round thread; `useChat` + `toUIMessageStreamResponse` |
+| `CoachMessage` model | ✅ | `CoachMessage` + migration; Q&A persisted per round |
+| Context injection | ✅ | `lib/coach/context.ts` — round SG/stats, last 5 rounds trend, prior `aiFeedback` |
+| Suggested prompts | ✅ | Four chips in `CoachChat` (“back nine”, range plan, costly holes, 30-min drill) |
+| Rate limits / token budget | ✅ | `lib/coach/rate-limit.ts` — 30 user msgs/day, 15/round; 600 max output tokens |
+| Deprecate duplicate `generateFeedback` | ✅ | Removed `app/actions/ai.ts`; `/api/coach` is sole post-round entry |
+| Chat UI on round detail | ✅ | `CoachChat` below AI Coach on completed rounds with hole data |
+| Model split | ✅ | Chat: `gpt-4o-mini` (reliable text stream); post-round: `gpt-5-mini` via `/api/coach` |
 
 **Scope guard:** Chat references **computed** stats only; system prompt forbids inventing shot data the user didn’t log.
+
+**Implementation note:** `gpt-5-mini` (Responses API) did not surface text parts in the UI message stream — chat uses `openai.chat('gpt-4o-mini')` instead. Assistant replies persist via `streamText` `onFinish` `{ text }`.
 
 ---
 
@@ -228,14 +232,14 @@ Also watch: 3 right OTT misses on par 4s > 400y
 
 | Order | Phase | Effort | User-visible payoff |
 |-------|-------|--------|---------------------|
-| 1 | **7a** Auto-coach on finish | Small | Every live round gets coaching automatically |
-| 2 | **2** Miss patterns | Medium | Specific, credible single-round advice |
-| 3 | **4** Structured coach output + card UI | Medium | Coach feels like a product, not a paragraph |
-| 4 | **5** Dashboard SG + practice focus | Medium | Value between rounds |
-| 5 | **3** Multi-round insights | Medium–Large | “It knows my game” moment |
-| 6 | **7b–7c** Turn / hole tips | Medium | True on-course caddie |
-| 7 | **8** Chat | Large | Depth for engaged users |
-| 8 | **9** Quick log + onboarding | Medium | More people complete first coach loop |
+| — | **7a** Auto-coach on finish | Small | ✅ Done |
+| — | **8** Conversational caddie | Large | ✅ Done |
+| — | **2** Miss patterns | Medium | ✅ Done |
+| 2 | **4** Structured coach output + card UI | Medium | Coach feels like a product, not a paragraph |
+| 3 | **5** Dashboard SG + practice focus | Medium | Value between rounds |
+| 4 | **3** Multi-round insights | Medium–Large | “It knows my game” moment |
+| 5 | **7b–7c** Turn / hole tips | Medium | True on-course caddie |
+| 6 | **9** Quick log + onboarding | Medium | More people complete first coach loop |
 
 ---
 
@@ -249,10 +253,14 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | `lib/golf-logic/miss-patterns.ts` | Phase 2 — segmented tendencies |
 | `lib/golf-logic/insights.ts` | Phase 3 — multi-round ranking |
 | `lib/auth.ts` | Clerk → DB user resolution |
-| `app/api/coach/route.ts` | Streaming AI coach (→ modes + structured output) |
-| `app/api/coach/chat/route.ts` | Phase 8 — conversational coach |
-| `components/AICoachButton.tsx` | Round detail trigger (→ `CoachAnalysisCard`) |
-| `components/CoachAnalysisCard.tsx` | Phase 5 — structured coach UI |
+| `app/api/coach/route.ts` | Post-round streaming coach (`gpt-5-mini`, saves `aiFeedback`) |
+| `app/api/coach/chat/route.ts` | Phase 8 — follow-up chat (`gpt-4o-mini`, persists `CoachMessage`) |
+| `lib/coach/context.ts` | Shared system rules + round/recent-round context for chat |
+| `lib/coach/rate-limit.ts` | Daily and per-round message caps |
+| `lib/coach/messages.ts` | `CoachMessage` → `UIMessage` + suggested prompts |
+| `components/AICoachButton.tsx` | Post-round coach trigger + auto-start (`?coach=1`) |
+| `components/CoachChat.tsx` | Phase 8 — follow-up chat UI on round detail |
+| `components/CoachAnalysisCard.tsx` | Phase 5 — structured coach UI (not started) |
 | `app/actions/play.ts` | `finishRound` — hook for Phase 7a auto-coach |
 | `components/PlayRoundClient.tsx` | Phase 7b–7c — on-course coach surfaces |
 | `components/AddRoundForm.tsx` | Post-round + hole-by-hole entry |

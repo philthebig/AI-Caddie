@@ -1,14 +1,17 @@
 'use client'
 
 import type { GeolocationState } from '@/hooks/useGeolocation'
+import { getHoleGps, type CourseGpsPayload } from '@/lib/golf-course-gps/types'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useEffect } from 'react'
-import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import { useEffect, useMemo } from 'react'
+import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
 
 export type PlayMapProps = {
   courseLatitude: number | null
   courseLongitude: number | null
+  courseGps: CourseGpsPayload | null
+  currentHoleNumber: number
   geo: Pick<
     GeolocationState,
     'latitude' | 'longitude' | 'loading' | 'error' | 'unavailable' | 'active' | 'requestLocation'
@@ -16,26 +19,26 @@ export type PlayMapProps = {
 }
 
 type MapViewControllerProps = {
-  course: { lat: number; lng: number } | null
-  player: { lat: number; lng: number } | null
+  points: Array<{ lat: number; lng: number }>
+  holeMode: boolean
 }
 
-function MapViewController({ course, player }: MapViewControllerProps) {
+function MapViewController({ points, holeMode }: MapViewControllerProps) {
   const map = useMap()
 
   useEffect(() => {
-    const points: L.LatLngExpression[] = []
-    if (course) points.push([course.lat, course.lng])
-    if (player) points.push([player.lat, player.lng])
     if (points.length === 0) return
 
     if (points.length === 1) {
-      map.setView(points[0], 15)
+      map.setView([points[0].lat, points[0].lng], holeMode ? 17 : 15)
       return
     }
 
-    map.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 17 })
-  }, [course, player, map])
+    map.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lng])), {
+      padding: [48, 48],
+      maxZoom: holeMode ? 18 : 17,
+    })
+  }, [points, holeMode, map])
 
   return null
 }
@@ -43,8 +46,12 @@ function MapViewController({ course, player }: MapViewControllerProps) {
 export default function PlayMapInner({
   courseLatitude,
   courseLongitude,
+  courseGps,
+  currentHoleNumber,
   geo,
 }: PlayMapProps) {
+  const holeGps = getHoleGps(courseGps, currentHoleNumber)
+
   const hasCourse =
     courseLatitude != null &&
     courseLongitude != null &&
@@ -53,7 +60,23 @@ export default function PlayMapInner({
 
   const hasPlayer = geo.latitude != null && geo.longitude != null
 
-  if (!hasCourse) {
+  const mapPoints = useMemo(() => {
+    const points: Array<{ lat: number; lng: number }> = []
+    if (holeGps) {
+      points.push(
+        { lat: holeGps.tee.latitude, lng: holeGps.tee.longitude },
+        { lat: holeGps.green.center.latitude, lng: holeGps.green.center.longitude }
+      )
+    } else if (hasCourse) {
+      points.push({ lat: courseLatitude!, lng: courseLongitude! })
+    }
+    if (hasPlayer) {
+      points.push({ lat: geo.latitude!, lng: geo.longitude! })
+    }
+    return points
+  }, [holeGps, hasCourse, courseLatitude, courseLongitude, hasPlayer, geo.latitude, geo.longitude])
+
+  if (!hasCourse && !holeGps) {
     return (
       <section
         className="flex h-[40dvh] shrink-0 items-center justify-center border-b border-slate-200 bg-slate-100 px-6 text-center"
@@ -66,12 +89,18 @@ export default function PlayMapInner({
     )
   }
 
-  const center: [number, number] = hasPlayer
-    ? [geo.latitude!, geo.longitude!]
-    : [courseLatitude, courseLongitude]
+  const center: [number, number] = holeGps
+    ? [holeGps.tee.latitude, holeGps.tee.longitude]
+    : hasPlayer
+      ? [geo.latitude!, geo.longitude!]
+      : [courseLatitude!, courseLongitude!]
 
-  const coursePoint = { lat: courseLatitude, lng: courseLongitude }
-  const playerPoint = hasPlayer ? { lat: geo.latitude!, lng: geo.longitude! } : null
+  const holeLine: [number, number][] | null = holeGps
+    ? [
+        [holeGps.tee.latitude, holeGps.tee.longitude],
+        [holeGps.green.center.latitude, holeGps.green.center.longitude],
+      ]
+    : null
 
   return (
     <section
@@ -80,7 +109,7 @@ export default function PlayMapInner({
     >
       <MapContainer
         center={center}
-        zoom={15}
+        zoom={holeGps ? 17 : 15}
         className="h-full w-full z-0"
         zoomControl={false}
         scrollWheelZoom={false}
@@ -89,16 +118,72 @@ export default function PlayMapInner({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <CircleMarker
-          center={[courseLatitude, courseLongitude]}
-          radius={10}
-          pathOptions={{
-            color: '#047857',
-            fillColor: '#10b981',
-            fillOpacity: 0.9,
-            weight: 2,
-          }}
-        />
+
+        {holeLine && (
+          <Polyline
+            positions={holeLine}
+            pathOptions={{ color: '#059669', weight: 3, opacity: 0.7, dashArray: '6 8' }}
+          />
+        )}
+
+        {holeGps ? (
+          <>
+            <CircleMarker
+              center={[holeGps.tee.latitude, holeGps.tee.longitude]}
+              radius={9}
+              pathOptions={{
+                color: '#b45309',
+                fillColor: '#f59e0b',
+                fillOpacity: 0.95,
+                weight: 2,
+              }}
+            />
+            <CircleMarker
+              center={[holeGps.green.front.latitude, holeGps.green.front.longitude]}
+              radius={6}
+              pathOptions={{
+                color: '#047857',
+                fillColor: '#6ee7b7',
+                fillOpacity: 0.9,
+                weight: 2,
+              }}
+            />
+            <CircleMarker
+              center={[holeGps.green.center.latitude, holeGps.green.center.longitude]}
+              radius={10}
+              pathOptions={{
+                color: '#047857',
+                fillColor: '#10b981',
+                fillOpacity: 0.95,
+                weight: 2,
+              }}
+            />
+            <CircleMarker
+              center={[holeGps.green.back.latitude, holeGps.green.back.longitude]}
+              radius={6}
+              pathOptions={{
+                color: '#047857',
+                fillColor: '#34d399',
+                fillOpacity: 0.9,
+                weight: 2,
+              }}
+            />
+          </>
+        ) : (
+          hasCourse && (
+            <CircleMarker
+              center={[courseLatitude!, courseLongitude!]}
+              radius={10}
+              pathOptions={{
+                color: '#047857',
+                fillColor: '#10b981',
+                fillOpacity: 0.9,
+                weight: 2,
+              }}
+            />
+          )
+        )}
+
         {hasPlayer && (
           <CircleMarker
             center={[geo.latitude!, geo.longitude!]}
@@ -111,14 +196,28 @@ export default function PlayMapInner({
             }}
           />
         )}
-        <MapViewController course={coursePoint} player={playerPoint} />
+
+        <MapViewController points={mapPoints} holeMode={Boolean(holeGps)} />
       </MapContainer>
 
       <div className="pointer-events-none absolute bottom-2 left-2 flex flex-col gap-1 rounded-lg bg-white/90 px-2.5 py-2 text-[10px] font-semibold text-slate-700 shadow-sm backdrop-blur-sm">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-700/30" />
-          Course center
-        </span>
+        {holeGps ? (
+          <>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-amber-700/30" />
+              Tee
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-700/30" />
+              Green (F / C / B)
+            </span>
+          </>
+        ) : (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-700/30" />
+            Course center
+          </span>
+        )}
         {hasPlayer && (
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-blue-700/30" />

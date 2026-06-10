@@ -1,5 +1,6 @@
 import type { Hole, Round } from '@prisma/client'
 import type { HoleInput, RoundAggregates } from '@/lib/types/golf'
+import { computeMissPatterns, formatMissPatterns } from './miss-patterns'
 import { computeRoundStrokesGained, formatStrokesGained } from './strokes-gained'
 
 type HoleLike = Pick<
@@ -91,52 +92,18 @@ export function formatRoundForAI(
     return lines.join('\n')
   }
 
-  const ottMisses = { LEFT: 0, RIGHT: 0 }
-  const appMisses = { LEFT: 0, RIGHT: 0, SHORT: 0, LONG: 0 }
-  const proximities: number[] = []
-  let argAttempts = 0
-  let argSaves = 0
-  let threePutts = 0
-
-  for (const hole of round.holes) {
-    if (hole.ottMissDirection === 'LEFT') ottMisses.LEFT++
-    if (hole.ottMissDirection === 'RIGHT') ottMisses.RIGHT++
-
-    if (!hole.gir && hole.appMissDirection) {
-      appMisses[hole.appMissDirection]++
-      if (hole.approachProximity != null) proximities.push(hole.approachProximity)
-    }
-
-    if (hole.upAndDownAttempt) {
-      argAttempts++
-      if (hole.upAndDownSuccess) argSaves++
-    }
-
-    if (hole.putts >= 3) threePutts++
-  }
-
   const sg = computeRoundStrokesGained(round.holes)
+  const missPatterns = computeMissPatterns(round.holes)
 
   lines.push(
     '',
     '--- Strokes Gained (computed — use these numbers directly) ---',
     formatStrokesGained(sg),
     '',
-    '--- Miss patterns (OTT / APP / ARG / PUTT) ---',
-    `OTT misses: Left ${ottMisses.LEFT}, Right ${ottMisses.RIGHT}`,
-    `APP misses: Left ${appMisses.LEFT}, Right ${appMisses.RIGHT}, Short ${appMisses.SHORT}, Long ${appMisses.LONG}`
+    formatMissPatterns(missPatterns),
+    '',
+    `Total putts: ${aggregates.totalPutts}`
   )
-
-  if (proximities.length > 0) {
-    const avg = Math.round(proximities.reduce((a, b) => a + b, 0) / proximities.length)
-    lines.push(`Avg approach proximity (missed GIR): ${avg} ft`)
-  }
-
-  if (argAttempts > 0) {
-    lines.push(`ARG up-and-down: ${argSaves}/${argAttempts} saved`)
-  }
-
-  lines.push(`PUTT: ${threePutts} three-putts, ${aggregates.totalPutts} total`)
 
   lines.push('', '--- Hole-by-hole ---')
   for (const hole of [...round.holes].sort((a, b) => a.holeNumber - b.holeNumber)) {

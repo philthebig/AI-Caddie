@@ -135,6 +135,57 @@ export type StrokesGainedBreakdown = {
   perHole: StrokesGainedHole[]
 }
 
+export type YardageBucket = 'short' | 'mid' | 'long'
+
+export type MissSegment = {
+  label: string
+  category: 'OTT' | 'APP'
+  direction: string
+  par?: number
+  yardageBucket?: YardageBucket
+  count: number
+  opportunities: number
+  holes: number[]
+}
+
+export type ArgProximityBand = {
+  band: '<15ft' | '15-30ft' | '30+ft'
+  attempts: number
+  saves: number
+}
+
+export type ThreePuttRates = {
+  onGir: { threePutts: number; opportunities: number }
+  offGir: { threePutts: number; opportunities: number }
+}
+
+export type BlowUpHole = {
+  holeNumber: number
+  score: number
+  par: number
+  vsPar: number
+  primaryCause: 'OTT' | 'APP' | 'ARG' | 'PUTT'
+  strokesLost: number
+}
+
+export type MissPatternSummary = {
+  ott: {
+    totalMisses: { left: number; right: number }
+    segments: MissSegment[]
+  }
+  app: {
+    totalMisses: { left: number; right: number; short: number; long: number }
+    segments: MissSegment[]
+    shortSided: { count: number; holes: number[] }
+  }
+  arg: {
+    proximityBands: ArgProximityBand[]
+    overall: { attempts: number; saves: number }
+  }
+  putt: ThreePuttRates
+  blowUps: BlowUpHole[]
+}
+
 export type CreateRoundErrorDetails = {
   formErrors: string[]
   fieldErrors: Record<string, string[] | undefined>

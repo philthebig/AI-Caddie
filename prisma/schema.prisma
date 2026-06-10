@@ -27,12 +27,18 @@ enum RoundStatus {
   COMPLETED
 }
 
+enum CoachMessageRole {
+  USER
+  ASSISTANT
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  rounds    Round[]
-  createdAt DateTime @default(now())
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  rounds        Round[]
+  coachMessages CoachMessage[]
+  createdAt     DateTime       @default(now())
 }
 
 model Round {
@@ -59,6 +65,36 @@ model Round {
   date           DateTime @default(now())
   status         RoundStatus @default(COMPLETED)
   holes          Hole[]
+  coachMessages  CoachMessage[]
+}
+
+model CoachMessage {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roundId   String?
+  round     Round?           @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  role      CoachMessageRole
+  content   String           @db.Text
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([roundId, createdAt])
+}
+
+/// Cached per-hole tee/green GPS. Keyed by golfcourseapi id or course name + coordinates.
+model CourseGpsCache {
+  id               String   @id @default(cuid())
+  cacheKey         String   @unique
+  externalCourseId Int?
+  courseName       String?
+  payload          Json
+  /// osm | manual | igolf | golfbert | golfintelligence
+  source           String
+  fetchedAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([externalCourseId])
 }
 
 model Hole {

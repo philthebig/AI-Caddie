@@ -1,8 +1,10 @@
 import AICoachButton from '@/components/AICoachButton'
+import CoachChat from '@/components/CoachChat'
 import DeleteRoundButton from '@/components/DeleteRoundButton'
 import HolePickerLinks from '@/components/HolePickerLinks'
 import StatPill from '@/components/StatPill'
 import { getDbUser } from '@/lib/auth'
+import { coachMessagesToUIMessages } from '@/lib/coach/messages'
 import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
 import { computeRoundStrokesGained } from '@/lib/golf-logic/strokes-gained'
 import { prisma } from '@/lib/db'
@@ -10,7 +12,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-type PageProps = { params: Promise<{ id: string }> }
+type PageProps = {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ coach?: string }>
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
@@ -24,8 +29,10 @@ function formatSg(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`
 }
 
-export default async function RoundDetailPage({ params }: PageProps) {
+export default async function RoundDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { coach } = await searchParams
+  const autoStartCoach = coach === '1'
   const dbUser = await getDbUser()
   if (!dbUser) notFound()
 
@@ -35,6 +42,17 @@ export default async function RoundDetailPage({ params }: PageProps) {
   })
 
   if (!round || round.userId !== dbUser.id) notFound()
+
+  let initialChatMessages: ReturnType<typeof coachMessagesToUIMessages> = []
+  try {
+    const chatHistory = await prisma.coachMessage.findMany({
+      where: { roundId: id, userId: dbUser.id },
+      orderBy: { createdAt: 'asc' },
+    })
+    initialChatMessages = coachMessagesToUIMessages(chatHistory)
+  } catch {
+    // CoachMessage table may be missing if migrations are pending
+  }
 
   const aggregates = computeRoundAggregates(round.holes, round.coursePar)
   const holeCount = round.holes.length > 0 ? round.holes.length : round.holeCount
@@ -228,8 +246,16 @@ export default async function RoundDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <section
+          id="ai-coach"
+          className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm scroll-mt-4"
+        >
           <h2 className="text-lg font-bold text-slate-800 mb-3">AI Coach</h2>
+          {autoStartCoach && !round.aiFeedback && (
+            <p className="text-sm text-slate-600 mb-3">
+              Round complete — your AI caddie is reviewing your stats.
+            </p>
+          )}
           {round.aiFeedback ? (
             <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
               <p className="text-indigo-900 text-sm leading-relaxed whitespace-pre-wrap">
@@ -237,7 +263,18 @@ export default async function RoundDetailPage({ params }: PageProps) {
               </p>
             </div>
           ) : (
-            <AICoachButton roundId={round.id} />
+            <AICoachButton roundId={round.id} autoStart={autoStartCoach} />
+          )}
+
+          {round.holes.length > 0 && round.status === 'COMPLETED' && (
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <h3 className="text-sm font-bold text-slate-700 mb-1">Ask a follow-up</h3>
+              <p className="text-xs text-slate-500 mb-3">
+                Your caddie knows this round&apos;s stats — ask about patterns, practice plans, or
+                specific holes.
+              </p>
+              <CoachChat roundId={round.id} initialMessages={initialChatMessages} />
+            </div>
           )}
         </section>
 

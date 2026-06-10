@@ -2,6 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { revalidatePath } from 'next/cache';
 import { getDbUser } from '@/lib/auth';
+import { COACH_CHAT_SYSTEM_RULES } from '@/lib/coach/context';
 import { formatRoundForAI } from '@/lib/golf-logic/aggregate';
 import { prisma } from '@/lib/db';
 
@@ -28,17 +29,16 @@ export async function POST(req: Request) {
   const roundData = formatRoundForAI(round);
 
   const prompt = `
-    You are an elite golf caddie focused on course management, dispersion patterns, and Strokes Gained analysis — not swing mechanics.
+    ${COACH_CHAT_SYSTEM_RULES}
 
     Analyze this round using the computed Strokes Gained breakdown and miss-direction patterns below.
-    Use the SG numbers directly — do not invent or recalculate statistics.
 
     ${roundData}
 
     Identify the single biggest weakness backed by the Strokes Gained data and miss patterns (e.g. right-side OTT misses on long par 4s, short-sided APP misses, three-putt frequency).
     State approximately how many strokes that weakness cost using the SG figures provided.
     Give ONE specific, actionable drill to address it.
-    Keep the tone encouraging but professional. Max 4 sentences.
+    Max 4 sentences.
   `;
 
   const result = streamText({

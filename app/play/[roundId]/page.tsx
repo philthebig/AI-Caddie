@@ -1,6 +1,7 @@
 import PlayRoundClient from '@/components/PlayRoundClient'
 import { getDbUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { resolveCourseGps } from '@/lib/golf-course-gps/resolve'
 import { holeInputFromDb, type HoleCount } from '@/lib/types/golf'
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
@@ -40,6 +41,17 @@ export default async function PlayRoundPage({ params }: PageProps) {
     .filter((hole) => hole.touched)
     .map((hole) => hole.holeNumber - 1)
 
+  const gpsResult = await resolveCourseGps(
+    {
+      externalCourseId: round.externalCourseId,
+      courseName: round.courseName,
+      latitude: round.courseLatitude,
+      longitude: round.courseLongitude,
+      holeCount: round.holeCount,
+    },
+    { cacheOnly: true }
+  )
+
   return (
     <main className="mx-auto max-w-2xl w-full">
       <PlayRoundClient
@@ -51,6 +63,8 @@ export default async function PlayRoundPage({ params }: PageProps) {
         holeCount={round.holeCount as HoleCount}
         initialHoles={initialHoles}
         initialSavedHoleIndices={initialSavedHoleIndices}
+        initialCourseGps={gpsResult.payload}
+        initialGpsSource={gpsResult.source}
       />
     </main>
   )

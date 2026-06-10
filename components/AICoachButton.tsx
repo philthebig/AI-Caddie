@@ -1,26 +1,37 @@
 'use client'
 
-import { useCompletion } from '@ai-sdk/react'; 
-import { useRouter } from 'next/navigation';
+import { useCompletion } from '@ai-sdk/react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef } from 'react'
 
-export default function AICoachButton({ roundId }: { roundId: string }) {
-  const router = useRouter();
+type AICoachButtonProps = {
+  roundId: string
+  /** Start coach stream on mount (e.g. after finishing a live round). */
+  autoStart?: boolean
+}
 
-  // The Vercel AI SDK Hook
+export default function AICoachButton({ roundId, autoStart = false }: AICoachButtonProps) {
+  const router = useRouter()
+  const autoStartedRef = useRef(false)
+
   const { complete, completion, isLoading, error } = useCompletion({
     api: '/api/coach',
-    // Must match the API's toTextStreamResponse() — default is data stream protocol
     streamProtocol: 'text',
     onFinish: () => {
-      // Refresh after DB save in the API route's onFinish has time to complete
-      setTimeout(() => router.refresh(), 500);
+      setTimeout(() => router.refresh(), 500)
     },
-  });
+  })
 
-  // Function to start the stream
   const handleClick = async () => {
-    await complete('', { body: { roundId } });
-  };
+    await complete('', { body: { roundId } })
+  }
+
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current) return
+    autoStartedRef.current = true
+    document.getElementById('ai-coach')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    void complete('', { body: { roundId } })
+  }, [autoStart, roundId, complete])
 
   // If we have any completion text (even if still loading), show it!
   if (completion || isLoading) {

@@ -30,15 +30,26 @@ const adapter = new PrismaPg({ connectionString })
 
 const schemaHash = prismaSchemaHash()
 
-// 3. Drop cached client when schema changes (e.g. after `prisma migrate`)
-if (process.env.NODE_ENV !== 'production' && globalForPrisma.prismaSchemaHash !== schemaHash) {
+/** True when the cached client predates a `prisma generate` (e.g. new models missing). */
+function isStalePrismaClient(client: PrismaClient | undefined): boolean {
+  if (!client) return false
+  return !('coachMessage' in client)
+}
+
+function shouldRecreatePrismaClient(): boolean {
+  if (!globalForPrisma.prisma) return true
+  if (globalForPrisma.prismaSchemaHash !== schemaHash) return true
+  return isStalePrismaClient(globalForPrisma.prisma)
+}
+
+// 3. Drop cached client when schema changes or delegates are out of date
+if (process.env.NODE_ENV !== 'production' && shouldRecreatePrismaClient()) {
   void globalForPrisma.prisma?.$disconnect()
   globalForPrisma.prisma = undefined
-  globalForPrisma.prismaSchemaHash = schemaHash
 }
 
 // 4. Create the Prisma instance ONLY if one doesn't already exist
-export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter })
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
 
 // 5. Save the instance in development so it survives hot-reloads
 if (process.env.NODE_ENV !== 'production') {

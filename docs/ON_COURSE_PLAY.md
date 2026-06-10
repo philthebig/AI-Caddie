@@ -280,47 +280,70 @@ Document in `.env.example` if added.
 
 ---
 
-## Phase 6f — Hole-level GPS data (paid provider) ⬜
+## Phase 6f — Hole-level GPS data ✅
 
 **Goal:** True distance to green (F/C/B pin positions), not course-center approximation.
 
 **Depends on:** Phase 6d ✅ (recommended)
 
-### Context
+### Provider architecture (free now, paid later)
 
-[golfcourseapi.com](https://golfcourseapi.com) does **not** provide per-hole tee/green coordinates. Evaluate paid providers:
+Hole GPS is resolved through a **pluggable provider stack** in `lib/golf-course-gps/`:
 
-- [iGolf Connect](https://igolf.com/solutions/golf-course-data/) — tee centers, pin F/C/B
-- [Golf Intelligence](https://golfintelligence.com/golf-course-database/) — tee, green, hazard coords
-- Golfbert — polygon boundaries
+| Priority | Provider | Env | Notes |
+|----------|----------|-----|-------|
+| 1 (cache) | `CourseGpsCache` DB | — | All sources cached; **manual calibrations are never auto-overwritten** |
+| 2 | Paid | `GOLF_GPS_PROVIDER`, `GOLF_GPS_API_KEY` | Stub in `providers/paid.ts` — wire iGolf / Golfbert / Golf Intelligence when keys exist |
+| 3 | OpenStreetMap | — | Free Overpass API (`golf=hole`, `golf=tee`, `golf=green`) |
+| 4 | Manual calibration | — | On-course “Mark tee / Mark green” UI; ideal for home courses (e.g. Club de golf Algonquin, Messines QC) |
+
+[golfcourseapi.com](https://golfcourseapi.com) still does **not** provide per-hole coordinates. Paid options for production-scale coverage:
+
+- [iGolf Connect](https://igolf.com/solutions/golf-course-data/)
+- [Golf Intelligence](https://golfintelligence.com/golf-course-database/)
+- [Golfbert](https://golfbert.com/api)
+
+To add a paid provider later: implement `fetchFromPaidProvider` in `lib/golf-course-gps/providers/paid.ts` — the resolver and cache layer stay unchanged.
 
 ### Tasks
 
 | Task | Notes |
 |------|-------|
-| Provider integration | `lib/golf-course-gps/` client + env key |
-| Cache table or JSON column | Store GPS per `externalCourseId`; fetch once, reuse offline |
-| `lib/golf-logic/distance.ts` | Distance to green front/center/back; optional “plays like” later |
-| Map overlays | Tee and green markers per hole |
-| Auto-advance hole on map | Center map on current hole geometry |
+| Provider integration | `lib/golf-course-gps/` + `providers/osm.ts`, `providers/paid.ts` |
+| Cache table | `CourseGpsCache` keyed by `gca:{id}` or `geo:{lat},{lng}:{name}` |
+| `lib/golf-logic/distance.ts` | `distancesToGreen()` for F/C/B |
+| Map overlays | Tee + green F/C/B markers; map fits current hole |
+| Manual calibration | `components/CourseGpsCalibration.tsx` on play screen |
+| Server actions | `app/actions/course-gps.ts` |
 
-### Schema (example)
+### Schema
 
 ```prisma
 model CourseGpsCache {
   id               String   @id @default(cuid())
-  externalCourseId Int      @unique
+  cacheKey         String   @unique
+  externalCourseId Int?
+  courseName       String?
   payload          Json     // holes[].tee, green.f/c/b lat/lng
+  source           String   // osm | manual | igolf | golfbert | ...
   fetchedAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 ```
 
+### Calibrating a home course (Algonquin example)
+
+1. Start a live round at **Club de golf Algonquin** (Messines, QC).
+2. On the play screen, tap **Calibrate on course** (or **Load from OSM** first if OSM has data).
+3. At each tee: **Mark tee here**. At the green: **Mark green center** (optional front/back).
+4. Save after ≥9 holes. Data is cached for all future rounds at that course.
+
 ### Acceptance criteria
 
-- [ ] Distance to green updates per hole using cached GPS data.
-- [ ] Map shows tee and green for current hole.
-- [ ] GPS data cached; repeat visits do not re-hit provider API every round.
-- [ ] Clear degradation when course has no GPS data in provider.
+- [x] Distance to green updates per hole using cached GPS data.
+- [x] Map shows tee and green for current hole.
+- [x] GPS data cached; repeat visits do not re-hit provider API every round.
+- [x] Clear degradation when course has no GPS data in provider.
 
 ---
 
@@ -341,7 +364,9 @@ model CourseGpsCache {
 | `components/PlayMap.tsx` | 6d | Map component |
 | `lib/offline/hole-queue.ts` | 6e | IndexedDB sync queue |
 | `hooks/useHoleSync.ts` | 6e | Online/offline sync |
-| `lib/golf-course-gps/` | 6f | Paid provider client |
+| `lib/golf-course-gps/` | 6f | Provider stack (OSM + paid stub + cache) |
+| `app/actions/course-gps.ts` | 6f | Fetch / save hole GPS |
+| `components/CourseGpsCalibration.tsx` | 6f | On-course manual pins |
 | `model CourseGpsCache` | 6f | Persist hole GPS |
 
 ## Reuse — do not reinvent
@@ -395,4 +420,4 @@ model CourseGpsCache {
 | 6c | GPS + distance display | ✅ |
 | 6d | Map view | ✅ |
 | 6e | Offline sync | ✅ |
-| 6f | Hole-level GPS (paid) | ⬜ |
+| 6f | Hole-level GPS | ✅ |

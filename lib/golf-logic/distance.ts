@@ -34,3 +34,20 @@ export function distanceInYards(from: LatLng, to: LatLng): number {
     haversineDistanceMeters(from.latitude, from.longitude, to.latitude, to.longitude)
   )
 }
+
+export type GreenTargetDistances = {
+  front: number
+  center: number
+  back: number
+}
+
+export function distancesToGreen(
+  from: LatLng,
+  green: { front: LatLng; center: LatLng; back: LatLng }
+): GreenTargetDistances {
+  return {
+    front: distanceInYards(from, green.front),
+    center: distanceInYards(from, green.center),
+    back: distanceInYards(from, green.back),
+  }
+}

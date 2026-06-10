@@ -1,9 +1,9 @@
-const CACHE = 'ai-caddie-v1'
+const CACHE = 'ai-caddie-v2'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then((cache) =>
-      cache.addAll(['/', '/manifest.json', '/logo-trimmed.png', '/logo-mark.png', '/icons/icon-192.png', '/icons/icon-512.png'])
+      cache.addAll(['/', '/manifest.json', '/logo-trimmed.png', '/logo-mark.png', '/apple-touch-icon.png', '/icons/icon-192.png', '/icons/icon-512.png'])
     )
   )
   self.skipWaiting()

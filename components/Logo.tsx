@@ -12,10 +12,9 @@ export default function Logo({ priority }: LogoProps) {
       <Image
         src="/logo-mark.png"
         alt="AI Caddie"
-        width={1768}
-        height={795}
-        className="h-7 w-auto object-contain sm:hidden"
-        style={{ width: 'auto', height: '1.75rem' }}
+        width={280}
+        height={280}
+        className="h-7 w-7 object-contain sm:hidden"
         priority={priority}
       />
       {/* Full wordmark on larger screens */}

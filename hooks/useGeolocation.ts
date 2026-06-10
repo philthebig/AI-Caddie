@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type GeolocationState = {
   latitude: number | null
@@ -11,6 +11,10 @@ export type GeolocationState = {
   error: string | null
   /** True when permission was denied or geolocation is unsupported. */
   unavailable: boolean
+  /** User has tapped to enable GPS; watch is active or was attempted. */
+  active: boolean
+  /** Call from a button click — iOS requires a user gesture to show the permission prompt. */
+  requestLocation: () => void
 }
 
 function geolocationErrorMessage(code: number): string {
@@ -26,34 +30,43 @@ function geolocationErrorMessage(code: number): string {
   }
 }
 
+function insecureContextMessage(): string {
+  return 'Location requires a secure (HTTPS) connection. Use the deployed app or enable location in Safari settings if already blocked.'
+}
+
 /**
- * Watch the device GPS position. Cleans up the watcher on unmount or when disabled.
- * Pass `enabled: false` to skip requesting location (e.g. when no course target exists).
+ * Watch the device GPS position after the user opts in via `requestLocation()`.
+ * iOS (especially home-screen PWAs) silently denies auto-started requests without a tap.
  */
 export function useGeolocation(enabled = true): GeolocationState {
-  const [state, setState] = useState<GeolocationState>({
+  const [active, setActive] = useState(false)
+  const [state, setState] = useState<Omit<GeolocationState, 'active' | 'requestLocation'>>({
     latitude: null,
     longitude: null,
     accuracy: null,
-    loading: enabled,
+    loading: false,
     error: null,
     unavailable: false,
   })
 
-  useEffect(() => {
-    if (!enabled) {
+  const requestLocation = useCallback(() => {
+    if (!enabled) return
+
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setActive(true)
       setState({
         latitude: null,
         longitude: null,
         accuracy: null,
         loading: false,
-        error: null,
-        unavailable: false,
+        error: insecureContextMessage(),
+        unavailable: true,
       })
       return
     }
 
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setActive(true)
       setState({
         latitude: null,
         longitude: null,
@@ -65,14 +78,22 @@ export function useGeolocation(enabled = true): GeolocationState {
       return
     }
 
-    let cancelled = false
-
+    setActive(true)
     setState((prev) => ({
       ...prev,
       loading: true,
       error: null,
       unavailable: false,
     }))
+  }, [enabled])
+
+  useEffect(() => {
+    if (!enabled || !active) return
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    if (typeof window !== 'undefined' && !window.isSecureContext) return
+
+    let cancelled = false
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
@@ -109,7 +130,24 @@ export function useGeolocation(enabled = true): GeolocationState {
       cancelled = true
       navigator.geolocation.clearWatch(watchId)
     }
+  }, [enabled, active])
+
+  useEffect(() => {
+    if (enabled) return
+    setActive(false)
+    setState({
+      latitude: null,
+      longitude: null,
+      accuracy: null,
+      loading: false,
+      error: null,
+      unavailable: false,
+    })
   }, [enabled])
 
-  return state
+  return {
+    ...state,
+    active,
+    requestLocation,
+  }
 }

@@ -39,6 +39,8 @@ export default function DistanceReadout({
 
   const showYardage = holeYardage != null && holeYardage > 0
   const showGps = hasCourseTarget && distanceToCenter != null
+  const needsEnable = hasCourseTarget && !geo.active && !showGps
+  const showDeniedHelp = hasCourseTarget && geo.active && geo.unavailable && geo.error
 
   if (!showYardage && !hasCourseTarget) {
     return null
@@ -67,6 +69,15 @@ export default function DistanceReadout({
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               GPS distance
             </p>
+            {needsEnable && (
+              <button
+                type="button"
+                onClick={geo.requestLocation}
+                className="mt-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 touch-manipulation min-h-11"
+              >
+                Enable location
+              </button>
+            )}
             {geo.loading && !showGps && (
               <p className="text-sm font-medium text-slate-600">Getting location…</p>
             )}
@@ -76,7 +87,7 @@ export default function DistanceReadout({
                 <span className="ml-1 text-sm font-semibold text-emerald-600/80">yds</span>
               </p>
             )}
-            {!geo.loading && !showGps && geo.error && (
+            {geo.active && !geo.loading && !showGps && geo.error && (
               <p className="text-sm font-medium text-slate-500">{geo.error}</p>
             )}
           </div>
@@ -90,10 +101,23 @@ export default function DistanceReadout({
         </p>
       )}
 
-      {hasCourseTarget && !geo.loading && !showGps && geo.unavailable && showYardage && (
-        <p className="mt-2 text-xs text-slate-500">
-          Enable location to see approximate distance to the course.
-        </p>
+      {showDeniedHelp && (
+        <div className="mt-2 space-y-2 text-xs text-slate-500">
+          <p>
+            iPhone only shows the location prompt after you tap Enable location. If you still
+            don&apos;t see it, check{' '}
+            <strong>Settings → Privacy &amp; Security → Location Services</strong> and allow
+            location for <strong>Caddie</strong> or <strong>Safari Websites</strong> (While Using,
+            Precise Location on).
+          </p>
+          <button
+            type="button"
+            onClick={geo.requestLocation}
+            className="text-emerald-700 font-semibold hover:text-emerald-900 touch-manipulation min-h-8"
+          >
+            Try again
+          </button>
+        </div>
       )}
     </section>
   )

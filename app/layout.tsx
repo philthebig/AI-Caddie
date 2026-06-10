@@ -55,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider allowedRedirectOrigins={['https://ai-caddie-mu.vercel.app']}>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <ConditionalAppHeader />

@@ -5,7 +5,9 @@ import CancelRoundButton from '@/components/CancelRoundButton'
 import DistanceReadout from '@/components/DistanceReadout'
 import HoleNavBar from '@/components/HoleNavBar'
 import HoleScoreCard from '@/components/HoleScoreCard'
+import PlayMap from '@/components/PlayMap'
 import PlayRoundHeader from '@/components/PlayRoundHeader'
+import { useGeolocation } from '@/hooks/useGeolocation'
 import type { HoleCount, HoleInput } from '@/lib/types/golf'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -93,6 +95,14 @@ export default function PlayRoundClient({
 
   const activeHoles = useMemo(() => holes.slice(0, holeCount), [holes, holeCount])
   const hole = activeHoles[currentHole]
+
+  const hasCourseTarget =
+    courseLatitude != null &&
+    courseLongitude != null &&
+    Number.isFinite(courseLatitude) &&
+    Number.isFinite(courseLongitude)
+
+  const geo = useGeolocation(hasCourseTarget)
 
   const updateHole = useCallback((index: number, patch: Partial<HoleInput>) => {
     setHoles((prev) => {
@@ -196,7 +206,13 @@ export default function PlayRoundClient({
         saving={saving}
       />
 
-      <div className="flex-1 px-4 sm:px-6 pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] space-y-4">
+      <PlayMap
+        courseLatitude={courseLatitude}
+        courseLongitude={courseLongitude}
+        geo={geo}
+      />
+
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] space-y-4">
         {error && (
           <div
             className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start justify-between gap-3"
@@ -219,6 +235,7 @@ export default function PlayRoundClient({
           holeYardage={hole.yardage}
           courseLatitude={courseLatitude}
           courseLongitude={courseLongitude}
+          geo={geo}
         />
 
         <HoleScoreCard hole={hole} onUpdate={(patch) => updateHole(currentHole, patch)} />

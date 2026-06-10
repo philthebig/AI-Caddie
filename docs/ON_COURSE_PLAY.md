@@ -212,7 +212,7 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 ---
 
-## Phase 6d — Map view ⬜
+## Phase 6d — Map view ✅
 
 **Goal:** Visual map on the play screen with player position and course context.
 
@@ -222,7 +222,7 @@ Query: `rounds where status = IN_PROGRESS` for current user on `app/page.tsx`.
 
 | Task | Notes |
 |------|-------|
-| Choose map library | **Leaflet** + OpenStreetMap (free, no API key) or **Mapbox GL** (free tier, needs token) |
+| Choose map library | **Leaflet** + OpenStreetMap (free, no API key) — chosen for 6d |
 | `components/PlayMap.tsx` | Map pane ~40% height; player dot from `useGeolocation` |
 | Course marker | Plot course center from stored lat/lng |
 | Play layout split | Map top, score entry bottom sheet / scrollable panel |
@@ -237,10 +237,10 @@ Document in `.env.example` if added.
 
 ### Acceptance criteria
 
-- [ ] Map renders on `/play/[roundId]` on mobile and desktop.
-- [ ] Player position updates on the map when GPS available.
-- [ ] Score entry remains usable below/alongside map.
-- [ ] Map does not block hole navigation or save actions.
+- [x] Map renders on `/play/[roundId]` on mobile and desktop.
+- [x] Player position updates on the map when GPS available.
+- [x] Score entry remains usable below/alongside map.
+- [x] Map does not block hole navigation or save actions.
 
 ### Out of scope
 
@@ -391,6 +391,6 @@ model CourseGpsCache {
 | 6a | Live play mode | ✅ |
 | 6b | Play UI polish | ✅ |
 | 6c | GPS + distance display | ✅ |
-| 6d | Map view | ⬜ |
+| 6d | Map view | ✅ |
 | 6e | Offline sync | ⬜ |
 | 6f | Hole-level GPS (paid) | ⬜ |

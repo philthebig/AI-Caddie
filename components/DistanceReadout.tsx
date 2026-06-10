@@ -1,6 +1,6 @@
 'use client'
 
-import { useGeolocation } from '@/hooks/useGeolocation'
+import type { GeolocationState } from '@/hooks/useGeolocation'
 import { distanceInYards } from '@/lib/golf-logic/distance'
 import { useMemo } from 'react'
 
@@ -8,20 +8,20 @@ type DistanceReadoutProps = {
   holeYardage: number | null | undefined
   courseLatitude: number | null | undefined
   courseLongitude: number | null | undefined
+  geo: GeolocationState
 }
 
 export default function DistanceReadout({
   holeYardage,
   courseLatitude,
   courseLongitude,
+  geo,
 }: DistanceReadoutProps) {
   const hasCourseTarget =
     courseLatitude != null &&
     courseLongitude != null &&
     Number.isFinite(courseLatitude) &&
     Number.isFinite(courseLongitude)
-
-  const geo = useGeolocation(hasCourseTarget)
 
   const distanceToCenter = useMemo(() => {
     if (

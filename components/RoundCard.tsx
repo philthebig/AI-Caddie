@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Hole, Round } from '@prisma/client'
+import { getCoachDisplaySummary } from '@/lib/coach/analysis'
 
 type RoundCardProps = {
   round: Round & { holes: Hole[] }
@@ -63,7 +64,7 @@ export default function RoundCard({ round }: RoundCardProps) {
 
       {round.aiFeedback && (
         <p className="mt-3 text-sm text-indigo-700 line-clamp-2 leading-snug">
-          {round.aiFeedback}
+          {getCoachDisplaySummary(round.aiFeedback)}
         </p>
       )}
 

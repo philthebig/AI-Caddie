@@ -1,5 +1,9 @@
 import type { Hole, Round } from '@prisma/client'
 import { formatRoundForAI } from '@/lib/golf-logic/aggregate'
+import {
+  formatCoachAnalysisAsText,
+  parseStoredCoachFeedback,
+} from '@/lib/coach/analysis'
 import { computeTrendPoints } from '@/lib/golf-logic/trends'
 
 type RoundWithHoles = Round & {
@@ -56,7 +60,13 @@ export function buildCoachChatSystemPrompt(
   const roundData = formatRoundForAI(round)
   const recentSummary = formatRecentRoundsSummary(recentRounds, round.id)
   const priorFeedback = round.aiFeedback
-    ? `\n--- Prior post-round coach summary ---\n${round.aiFeedback}`
+    ? (() => {
+        const stored = parseStoredCoachFeedback(round.aiFeedback)
+        const text = stored
+          ? formatCoachAnalysisAsText(stored.analysis)
+          : round.aiFeedback
+        return `\n--- Prior post-round coach summary ---\n${text}`
+      })()
     : ''
 
   return [

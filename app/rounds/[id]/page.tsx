@@ -4,6 +4,7 @@ import DeleteRoundButton from '@/components/DeleteRoundButton'
 import HolePickerLinks from '@/components/HolePickerLinks'
 import StatPill from '@/components/StatPill'
 import { getDbUser } from '@/lib/auth'
+import { parseStoredCoachFeedback } from '@/lib/coach/analysis'
 import { coachMessagesToUIMessages } from '@/lib/coach/messages'
 import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
 import { computeRoundStrokesGained } from '@/lib/golf-logic/strokes-gained'
@@ -42,6 +43,10 @@ export default async function RoundDetailPage({ params, searchParams }: PageProp
   })
 
   if (!round || round.userId !== dbUser.id) notFound()
+
+  const storedCoachFeedback = parseStoredCoachFeedback(round.aiFeedback)
+  const legacyCoachFeedback =
+    round.aiFeedback && !storedCoachFeedback ? round.aiFeedback : null
 
   let initialChatMessages: ReturnType<typeof coachMessagesToUIMessages> = []
   try {
@@ -256,14 +261,17 @@ export default async function RoundDetailPage({ params, searchParams }: PageProp
               Round complete — your AI caddie is reviewing your stats.
             </p>
           )}
-          {round.aiFeedback ? (
-            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
-              <p className="text-indigo-900 text-sm leading-relaxed whitespace-pre-wrap">
-                {round.aiFeedback}
-              </p>
-            </div>
+          {storedCoachFeedback ? (
+            <AICoachButton
+              roundId={round.id}
+              initialFeedback={storedCoachFeedback}
+            />
           ) : (
-            <AICoachButton roundId={round.id} autoStart={autoStartCoach} />
+            <AICoachButton
+              roundId={round.id}
+              autoStart={autoStartCoach}
+              legacyFeedback={legacyCoachFeedback}
+            />
           )}
 
           {round.holes.length > 0 && round.status === 'COMPLETED' && (

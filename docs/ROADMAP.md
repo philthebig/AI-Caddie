@@ -100,19 +100,19 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 
 ---
 
-## Phase 4 — Coach engine refactor ⬜
+## Phase 4 — Coach engine refactor ✅
 
 **Goal:** Structured, multi-section coaching — not one paragraph blob.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `buildCoachPayload()` | ⬜ | Replaces/extends `formatRoundForAI`; JSON + human summary |
-| Consolidate `app/actions/ai.ts` with coach route | ⬜ | Single prompt builder + shared types |
-| Coach **modes** via query/body | ⬜ | `post_round` \| `quick_tip` \| `hole_recap` \| `weekly_focus` |
-| Structured AI output (JSON schema) | ⬜ | `summary`, `primaryFocus`, `secondaryFocus?`, `strokesCost`, `evidenceHoles[]`, `drill`, `encouragement` |
-| Drill lookup table | ⬜ | Category → 2–3 vetted drills (reduces hallucinated drills) |
-| Regenerate coach | ⬜ | Allow new analysis; version or replace `aiFeedback` |
-| Richer default prompt | ⬜ | Drop “max 4 sentences”; require evidence holes + numeric SG |
+| `buildCoachPayload()` | ✅ | `lib/coach/payload.ts` — JSON context + human summary |
+| Consolidate `app/actions/ai.ts` with coach route | ✅ | Phase 8 removed legacy action; `/api/coach` + shared `lib/coach/*` |
+| Coach **modes** via query/body | ✅ | `post_round` \| `quick_tip` \| `hole_recap` \| `weekly_focus` |
+| Structured AI output (JSON schema) | ✅ | `lib/coach/types.ts` — `generateObject` + Zod schema |
+| Drill lookup table | ✅ | `lib/coach/drills.ts` — category → vetted drills |
+| Regenerate coach | ✅ | `regenerate: true` replaces `aiFeedback`; UI button on card |
+| Richer default prompt | ✅ | Evidence holes + numeric SG required; no 4-sentence cap |
 
 **Example post-round card (UI target):**
 
@@ -235,7 +235,7 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | — | **7a** Auto-coach on finish | Small | ✅ Done |
 | — | **8** Conversational caddie | Large | ✅ Done |
 | — | **2** Miss patterns | Medium | ✅ Done |
-| 2 | **4** Structured coach output + card UI | Medium | Coach feels like a product, not a paragraph |
+| 2 | **4** Structured coach output + card UI | Medium | ✅ Done |
 | 3 | **5** Dashboard SG + practice focus | Medium | Value between rounds |
 | 4 | **3** Multi-round insights | Medium–Large | “It knows my game” moment |
 | 5 | **7b–7c** Turn / hole tips | Medium | True on-course caddie |
@@ -249,18 +249,23 @@ Also watch: 3 right OTT misses on par 4s > 400y
 |------|------|
 | `lib/golf-logic/baselines.ts` | Expected-strokes tables |
 | `lib/golf-logic/strokes-gained.ts` | SG computation |
-| `lib/golf-logic/aggregate.ts` | Aggregates + `formatRoundForAI` (→ `buildCoachPayload`) |
+| `lib/golf-logic/aggregate.ts` | Aggregates + `formatRoundForAI` |
+| `lib/coach/payload.ts` | Phase 4 — `buildCoachPayload()` |
+| `lib/coach/prompt.ts` | Phase 4 — mode-specific coach prompts |
+| `lib/coach/drills.ts` | Phase 4 — vetted drill catalog |
+| `lib/coach/types.ts` | Phase 4 — `CoachAnalysis` schema + modes |
+| `lib/coach/analysis.ts` | Phase 4 — parse/serialize stored feedback |
 | `lib/golf-logic/miss-patterns.ts` | Phase 2 — segmented tendencies |
 | `lib/golf-logic/insights.ts` | Phase 3 — multi-round ranking |
 | `lib/auth.ts` | Clerk → DB user resolution |
-| `app/api/coach/route.ts` | Post-round streaming coach (`gpt-5-mini`, saves `aiFeedback`) |
+| `app/api/coach/route.ts` | Post-round structured coach (`gpt-5-mini`, JSON `aiFeedback`) |
 | `app/api/coach/chat/route.ts` | Phase 8 — follow-up chat (`gpt-4o-mini`, persists `CoachMessage`) |
 | `lib/coach/context.ts` | Shared system rules + round/recent-round context for chat |
 | `lib/coach/rate-limit.ts` | Daily and per-round message caps |
 | `lib/coach/messages.ts` | `CoachMessage` → `UIMessage` + suggested prompts |
 | `components/AICoachButton.tsx` | Post-round coach trigger + auto-start (`?coach=1`) |
 | `components/CoachChat.tsx` | Phase 8 — follow-up chat UI on round detail |
-| `components/CoachAnalysisCard.tsx` | Phase 5 — structured coach UI (not started) |
+| `components/CoachAnalysisCard.tsx` | Phase 4/5 — structured coach sections |
 | `app/actions/play.ts` | `finishRound` — hook for Phase 7a auto-coach |
 | `components/PlayRoundClient.tsx` | Phase 7b–7c — on-course coach surfaces |
 | `components/AddRoundForm.tsx` | Post-round + hole-by-hole entry |

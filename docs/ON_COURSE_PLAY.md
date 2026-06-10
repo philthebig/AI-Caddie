@@ -248,7 +248,7 @@ Document in `.env.example` if added.
 
 ---
 
-## Phase 6e — Offline hole queue ⬜
+## Phase 6e — Offline hole queue ✅
 
 **Goal:** Continue entering scores with weak or no cell signal; sync when back online.
 
@@ -271,10 +271,12 @@ Document in `.env.example` if added.
 
 ### Acceptance criteria
 
-- [ ] Enter hole data in airplane mode; data retained in UI.
-- [ ] On reconnect, queued holes sync to server without user action.
-- [ ] User sees sync status (pending / synced / failed).
-- [ ] No duplicate holes after sync (idempotent `saveHole`).
+- [x] Enter hole data in airplane mode; data retained in UI.
+- [x] On reconnect, queued holes sync to server without user action.
+- [x] User sees sync status (pending / synced / failed).
+- [x] No duplicate holes after sync (idempotent `saveHole`).
+
+**Conflict policy:** last-write-wins on the client; `saveHole` upserts by `roundId` + `holeNumber`.
 
 ---
 
@@ -392,5 +394,5 @@ model CourseGpsCache {
 | 6b | Play UI polish | ✅ |
 | 6c | GPS + distance display | ✅ |
 | 6d | Map view | ✅ |
-| 6e | Offline sync | ⬜ |
+| 6e | Offline sync | ✅ |
 | 6f | Hole-level GPS (paid) | ⬜ |

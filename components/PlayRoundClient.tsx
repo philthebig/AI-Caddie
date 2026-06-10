@@ -1,13 +1,16 @@
 'use client'
 
-import { finishRound, saveHole } from '@/app/actions/play'
+import { finishRound } from '@/app/actions/play'
 import CancelRoundButton from '@/components/CancelRoundButton'
 import DistanceReadout from '@/components/DistanceReadout'
 import HoleNavBar from '@/components/HoleNavBar'
 import HoleScoreCard from '@/components/HoleScoreCard'
+import HoleSyncBanner from '@/components/HoleSyncBanner'
 import PlayMap from '@/components/PlayMap'
 import PlayRoundHeader from '@/components/PlayRoundHeader'
 import { useGeolocation } from '@/hooks/useGeolocation'
+import { useHoleSync } from '@/hooks/useHoleSync'
+import type { QueuedHole } from '@/lib/offline/hole-queue'
 import type { HoleCount, HoleInput } from '@/lib/types/golf'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -46,6 +49,18 @@ function loadCompletedHoles(roundId: string): Set<number> {
   }
 }
 
+function mergeQueuedHoles(holes: HoleInput[], queued: QueuedHole[]): HoleInput[] {
+  if (queued.length === 0) return holes
+  const next = [...holes]
+  for (const entry of queued) {
+    const index = entry.holeNumber - 1
+    if (index >= 0 && index < next.length) {
+      next[index] = { ...next[index], ...entry.holeData, holeNumber: entry.holeNumber }
+    }
+  }
+  return next
+}
+
 type PlayRoundClientProps = {
   roundId: string
   courseName: string
@@ -81,6 +96,22 @@ export default function PlayRoundClient({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+
+  const handleQueueHydrate = useCallback((queued: QueuedHole[]) => {
+    if (queued.length === 0) return
+    setHoles((prev) => mergeQueuedHoles(prev, queued))
+    setCompletedHoles((prev) => {
+      const next = new Set(prev)
+      for (const entry of queued) {
+        const index = entry.holeNumber - 1
+        if (index >= 0 && index < holeCount) next.add(index)
+      }
+      return next
+    })
+  }, [holeCount])
+
+  const sync = useHoleSync({ roundId, onHydrate: handleQueueHydrate })
 
   useEffect(() => {
     localStorage.setItem(playHoleStorageKey(roundId), String(currentHole))
@@ -95,6 +126,15 @@ export default function PlayRoundClient({
 
   const activeHoles = useMemo(() => holes.slice(0, holeCount), [holes, holeCount])
   const hole = activeHoles[currentHole]
+
+  const pendingHoleIndices = useMemo(
+    () => new Set([...sync.pendingHoleNumbers].map((n) => n - 1)),
+    [sync.pendingHoleNumbers]
+  )
+  const failedHoleIndices = useMemo(
+    () => new Set([...sync.failedHoleNumbers].map((n) => n - 1)),
+    [sync.failedHoleNumbers]
+  )
 
   const hasCourseTarget =
     courseLatitude != null &&
@@ -137,13 +177,14 @@ export default function PlayRoundClient({
     if (!hole) return { error: 'No hole selected' }
     setSaving(true)
     setError(null)
-    const result = await saveHole(roundId, hole.holeNumber, hole)
+    const result = await sync.persistHole(hole.holeNumber, hole)
     setSaving(false)
-    return result
+    if ('error' in result) return { error: result.error }
+    return { success: true as const }
   }
 
   async function handleNext() {
-    if (saving) return
+    if (saving || sync.syncing) return
     const result = await persistCurrentHole()
     if (result?.error) {
       setError(result.error)
@@ -156,14 +197,27 @@ export default function PlayRoundClient({
   }
 
   async function handleFinish() {
-    if (saving) return
+    if (saving || sync.syncing) return
+
     const saveResult = await persistCurrentHole()
     if (saveResult?.error) {
       setError(saveResult.error)
       return
     }
 
+    if (!sync.isOnline) {
+      setError('Connect to the internet to finish your round. Your scores are saved on this device.')
+      return
+    }
+
     setSaving(true)
+    const flushResult = await sync.flushQueue()
+    if ('error' in flushResult) {
+      setSaving(false)
+      setError(flushResult.error)
+      return
+    }
+
     const finishResult = await finishRound(roundId)
     setSaving(false)
 
@@ -172,10 +226,22 @@ export default function PlayRoundClient({
       return
     }
 
+    await sync.clearQueue()
     localStorage.removeItem(playHoleStorageKey(roundId))
     localStorage.removeItem(playCompletedStorageKey(roundId))
     router.push(`/rounds/${roundId}`)
     router.refresh()
+  }
+
+  async function handleRetrySync() {
+    if (retrying || sync.syncing) return
+    setRetrying(true)
+    setError(null)
+    const result = await sync.retryFailed()
+    if ('error' in result) {
+      setError(result.error)
+    }
+    setRetrying(false)
   }
 
   function goToHole(index: number) {
@@ -195,6 +261,8 @@ export default function PlayRoundClient({
     )
   }
 
+  const navDisabled = saving || sync.syncing || !sync.hydrated
+
   return (
     <div className="flex min-h-dvh flex-col">
       <PlayRoundHeader
@@ -203,7 +271,8 @@ export default function PlayRoundClient({
         currentHole={hole}
         holes={activeHoles}
         currentHoleIndex={currentHole}
-        saving={saving}
+        saving={saving || sync.syncing}
+        holeSyncStatus={sync.getHoleStatus(hole.holeNumber)}
       />
 
       <PlayMap
@@ -213,6 +282,15 @@ export default function PlayRoundClient({
       />
 
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] space-y-4">
+        <HoleSyncBanner
+          isOnline={sync.isOnline}
+          syncing={sync.syncing}
+          pendingCount={sync.pendingHoleNumbers.size}
+          failedCount={sync.failedHoleNumbers.size}
+          onRetry={handleRetrySync}
+          retrying={retrying}
+        />
+
         {error && (
           <div
             className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start justify-between gap-3"
@@ -249,13 +327,15 @@ export default function PlayRoundClient({
         currentHole={currentHole}
         holeCount={holeCount}
         completedHoles={completedHoles}
+        pendingHoles={pendingHoleIndices}
+        failedHoles={failedHoleIndices}
         onSelectHole={goToHole}
         onPrev={goPrevHole}
         onNext={handleNext}
         onReview={handleFinish}
         pickerOpen={pickerOpen}
         onTogglePicker={() => setPickerOpen((o) => !o)}
-        disabled={saving}
+        disabled={navDisabled}
       />
     </div>
   )

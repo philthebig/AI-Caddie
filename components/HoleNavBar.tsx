@@ -6,6 +6,8 @@ type HoleNavBarProps = {
   currentHole: number
   holeCount: number
   completedHoles: ReadonlySet<number>
+  pendingHoles?: ReadonlySet<number>
+  failedHoles?: ReadonlySet<number>
   onSelectHole: (index: number) => void
   onPrev: () => void
   onNext: () => void
@@ -19,6 +21,8 @@ export default function HoleNavBar({
   currentHole,
   holeCount,
   completedHoles,
+  pendingHoles,
+  failedHoles,
   onSelectHole,
   onPrev,
   onNext,
@@ -47,6 +51,8 @@ export default function HoleNavBar({
               holeCount={holeCount}
               currentHole={currentHole}
               completedHoles={completedHoles}
+              pendingHoles={pendingHoles}
+              failedHoles={failedHoles}
               onSelect={handleSelect}
             />
           </div>

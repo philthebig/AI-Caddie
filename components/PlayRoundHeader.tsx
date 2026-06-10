@@ -1,6 +1,7 @@
 'use client'
 
 import { computeRoundAggregates } from '@/lib/golf-logic/aggregate'
+import type { HoleSyncStatus } from '@/hooks/useHoleSync'
 import type { HoleInput } from '@/lib/types/golf'
 import Link from 'next/link'
 import { useMemo } from 'react'
@@ -12,6 +13,7 @@ type PlayRoundHeaderProps = {
   holes: HoleInput[]
   currentHoleIndex: number
   saving?: boolean
+  holeSyncStatus?: HoleSyncStatus
 }
 
 function formatVsPar(score: number, par: number | null): string | null {
@@ -28,6 +30,7 @@ export default function PlayRoundHeader({
   holes,
   currentHoleIndex,
   saving = false,
+  holeSyncStatus = 'synced',
 }: PlayRoundHeaderProps) {
   const playedHoles = useMemo(
     () => holes.slice(0, currentHoleIndex + 1),
@@ -118,7 +121,17 @@ export default function PlayRoundHeader({
 
         {saving && (
           <p className="text-center text-xs font-semibold text-emerald-100 animate-pulse-text" aria-live="polite">
-            Saving hole…
+            {holeSyncStatus === 'pending' ? 'Saved locally…' : 'Saving hole…'}
+          </p>
+        )}
+        {!saving && holeSyncStatus === 'pending' && (
+          <p className="text-center text-xs font-semibold text-amber-100" aria-live="polite">
+            This hole is saved locally · will sync when online
+          </p>
+        )}
+        {!saving && holeSyncStatus === 'failed' && (
+          <p className="text-center text-xs font-semibold text-red-200" aria-live="polite">
+            Sync failed for this hole · use Retry below
           </p>
         )}
       </div>

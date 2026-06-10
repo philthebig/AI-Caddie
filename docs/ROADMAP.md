@@ -99,7 +99,7 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 | 6b | Play UI polish | ✅ | Running totals, full-screen layout, auto-advance |
 | 6c | GPS + distance | ✅ | `useGeolocation`, yardage + rough GPS readout |
 | 6d | Map view | ✅ | Leaflet + OpenStreetMap on play screen |
-| 6e | Offline sync | ⬜ | IndexedDB queue for spotty cell |
+| 6e | Offline sync | ✅ | IndexedDB queue for spotty cell |
 | 6f | Hole-level GPS | ⬜ | Paid provider (iGolf, etc.) for true green distance |
 
 **Agent prompt (6a):** *Read `docs/ON_COURSE_PLAY.md` and implement Phase 6a only.*

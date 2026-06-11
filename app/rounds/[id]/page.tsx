@@ -1,6 +1,7 @@
 import AICoachButton from '@/components/AICoachButton'
 import CoachChat from '@/components/CoachChat'
 import DeleteRoundButton from '@/components/DeleteRoundButton'
+import ShareRoundButton from '@/components/ShareRoundButton'
 import HolePickerLinks from '@/components/HolePickerLinks'
 import SgChips from '@/components/SgChips'
 import StatPill from '@/components/StatPill'
@@ -259,6 +260,16 @@ export default async function RoundDetailPage({ params, searchParams }: PageProp
             </div>
           )}
         </section>
+
+        {round.status === 'COMPLETED' && (
+          <section className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-800">Share</h2>
+            <ShareRoundButton
+              roundId={round.id}
+              hasCoachFeedback={Boolean(round.aiFeedback)}
+            />
+          </section>
+        )}
 
         <section className="pt-2">
           <DeleteRoundButton roundId={round.id} />

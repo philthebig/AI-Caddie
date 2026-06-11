@@ -30,10 +30,13 @@ const adapter = new PrismaPg({ connectionString })
 
 const schemaHash = prismaSchemaHash()
 
+/** Delegates that must exist — extend when adding new Prisma models. */
+const REQUIRED_PRISMA_DELEGATES = ['coachMessage', 'friendship', 'roundShare'] as const
+
 /** True when the cached client predates a `prisma generate` (e.g. new models missing). */
 function isStalePrismaClient(client: PrismaClient | undefined): boolean {
   if (!client) return false
-  return !('coachMessage' in client)
+  return REQUIRED_PRISMA_DELEGATES.some((key) => !(key in client))
 }
 
 function shouldRecreatePrismaClient(): boolean {

@@ -32,13 +32,60 @@ enum CoachMessageRole {
   ASSISTANT
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
   name          String?
+  /// Lowercase handle for friend search (set on /friends)
+  username      String?        @unique
   rounds        Round[]
   coachMessages CoachMessage[]
+
+  friendshipsSent     Friendship[] @relation("FriendshipRequester")
+  friendshipsReceived Friendship[] @relation("FriendshipAddressee")
+  roundSharesSent     RoundShare[] @relation("RoundShareSender")
+  roundSharesReceived RoundShare[] @relation("RoundShareRecipient")
+
   createdAt     DateTime       @default(now())
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+model RoundShare {
+  id                   String    @id @default(cuid())
+  roundId              String
+  round                Round     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  sharedByUserId       String
+  sharedBy             User      @relation("RoundShareSender", fields: [sharedByUserId], references: [id], onDelete: Cascade)
+  /// In-app share to a friend; null for link-only shares
+  sharedToUserId       String?
+  sharedTo             User?     @relation("RoundShareRecipient", fields: [sharedToUserId], references: [id], onDelete: SetNull)
+  shareToken           String    @unique
+  includeCoachHeadline Boolean   @default(true)
+  expiresAt            DateTime?
+  createdAt            DateTime  @default(now())
+
+  @@index([sharedToUserId, createdAt])
+  @@index([sharedByUserId, createdAt])
 }
 
 model Round {
@@ -66,6 +113,7 @@ model Round {
   status         RoundStatus @default(COMPLETED)
   holes          Hole[]
   coachMessages  CoachMessage[]
+  shares         RoundShare[]
 }
 
 model CoachMessage {

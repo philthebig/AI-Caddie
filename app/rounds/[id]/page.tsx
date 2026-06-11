@@ -2,6 +2,7 @@ import AICoachButton from '@/components/AICoachButton'
 import CoachChat from '@/components/CoachChat'
 import DeleteRoundButton from '@/components/DeleteRoundButton'
 import HolePickerLinks from '@/components/HolePickerLinks'
+import SgChips from '@/components/SgChips'
 import StatPill from '@/components/StatPill'
 import { getDbUser } from '@/lib/auth'
 import { parseStoredCoachFeedback } from '@/lib/coach/analysis'
@@ -24,10 +25,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: round?.courseName ?? 'Round',
   }
-}
-
-function formatSg(n: number): string {
-  return `${n >= 0 ? '+' : ''}${n.toFixed(1)}`
 }
 
 export default async function RoundDetailPage({ params, searchParams }: PageProps) {
@@ -143,30 +140,7 @@ export default async function RoundDetailPage({ params, searchParams }: PageProp
             <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
               Strokes gained
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ['OTT', sg.ott],
-                  ['APP', sg.app],
-                  ['ARG', sg.arg],
-                  ['PUTT', sg.putt],
-                ] as const
-              ).map(([cat, val]) => (
-                <span
-                  key={cat}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ${
-                    val >= 0
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'bg-red-50 text-red-800 border border-red-200'
-                  }`}
-                >
-                  {cat} {formatSg(val)}
-                </span>
-              ))}
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-black bg-slate-100 text-slate-800 border border-slate-200">
-                Total {formatSg(sg.total)}
-              </span>
-            </div>
+            <SgChips sg={sg} />
           </section>
         )}
 

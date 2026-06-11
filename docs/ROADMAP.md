@@ -1,6 +1,6 @@
 # AI Caddie — Product Roadmap
 
-Track implementation phases for the golf logic layer and smarter AI coaching.
+Track implementation phases for the golf logic layer, smarter AI coaching, and social play.
 
 ## Status legend
 
@@ -24,7 +24,7 @@ Track implementation phases for the golf logic layer and smarter AI coaching.
 | Single round only | No “you’ve missed right OTT in 4 of last 5 rounds” |
 | Raw miss counts in prompt | ✅ Phase 2 — segmented by par, yardage, proximity, GIR |
 | Stored once in `Round.aiFeedback` | No regenerate; follow-up chat ✅ (Phase 8) but initial summary still one-shot |
-| SG on round detail only | Dashboard round cards still lack SG chips (Phase 5) |
+| SG on round detail only | ✅ Phase 5 — SG chips on dashboard round cards |
 | Auto-coach on finish (Phase 7a) ✅ | No turn/hole tips yet; no coaching *during* the round |
 
 ### Coaching vision (target experience)
@@ -126,18 +126,18 @@ Also watch: 3 right OTT misses on par 4s > 400y
 
 ---
 
-## Phase 5 — Coach UX & dashboard ⬜
+## Phase 5 — Coach UX & dashboard ✅
 
 **Goal:** Show SG and patterns to the golfer — coach visible beyond one round detail page.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `CoachAnalysisCard` component | ⬜ | Structured sections from Phase 4 JSON |
-| SG chips on dashboard round cards | ⬜ | OTT / APP / ARG / PUTT color-coded |
-| **Practice focus** banner on dashboard | ⬜ | Top insight from Phase 3 when ≥3 rounds |
-| Miss-pattern preview on review step | ⬜ | Before save / finish round |
+| `CoachAnalysisCard` component | ✅ | Structured sections from Phase 4 JSON |
+| SG chips on dashboard round cards | ✅ | `SgChips` on `RoundCard` — OTT / APP / ARG / PUTT color-coded |
+| **Practice focus** banner on dashboard | ✅ | `computePracticeFocus()` + `PracticeFocusBanner` when ≥3 rounds |
+| Miss-pattern preview on review step | ✅ | `MissPatternPreview` on `AddRoundForm` review step |
 | Post-finish coach screen | ✅ | `/rounds/[id]?coach=1` auto-starts post-round stream (Phase 7a) |
-| Store handicap / skill index on `User` | ⬜ | Tune baselines + tone (“18 hcp” vs “single digit”) |
+| Store handicap / skill index on `User` | ⬜ | Deferred — tune baselines + tone (“18 hcp” vs “single digit”) |
 | “Ask follow-up” entry point | ✅ | `CoachChat` on round detail (Phase 8) |
 
 ---
@@ -210,8 +210,67 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | First-round onboarding coach | ⬜ | Extra-encouraging template; explain what to track next time |
 | Demo / sample round (logged out or new user) | ⬜ | Show coach output on example data |
 | Email or push: “Round ready for review” | ⬜ | Optional; nudge to open coach after incomplete round |
-| Shareable coach summary (image/link) | ⬜ | Viral loop — “My caddie said work on lag putts” |
+| Shareable coach summary (image/link) | ⬜ | Viral loop — “My caddie said work on lag putts”; Phase 10b extends to friends |
 | i18n-ready coach prompts | ⬜ | FR for QC courses (Algonquin, etc.) |
+
+---
+
+## Phase 10 — Social & friends ⬜ **New — play together, learn together**
+
+**Goal:** Let golfers connect with friends, share rounds and coach highlights, and optionally play the same outing together — without turning the app into a generic scorecard network. Social features should reinforce coaching (“we both leak strokes APP”) and retention, not replace the caddie.
+
+**Depends on:** Phase 6 ✅ (live play) for real-time group rounds; Phase 9 shareable summary overlaps 10b.
+
+### Social vision (target experience)
+
+1. **Find & add friends** — Search by username, accept requests, or invite via link/QR.
+2. **Share a round** — Post score + SG chips + coach headline to a friend or feed; privacy per round.
+3. **Play together** — Start a linked group round; see live scores on the same card while each person keeps their own AI coach.
+4. **Between rounds** — Friend leaderboard, head-to-head trends, nudge when a buddy finishes a round.
+5. **Optional games** — Stroke play, match play, or Nassau/skins scoring on top of linked rounds (v2).
+
+### Sub-phases
+
+| Sub-phase | Goal | Status | Notes |
+|-----------|------|--------|-------|
+| 10a | Profiles & friend graph | ⬜ | `Friendship` model (pending / accepted / blocked); display name + avatar from Clerk; `/friends` page |
+| 10b | Share rounds & coach highlights | ⬜ | Share link or in-app to friend; OG image with score + coach headline + SG chips; reuse Phase 9 asset pipeline |
+| 10c | Linked group rounds | ⬜ | `GroupRound` + participants; “Playing with…” picker at round start; same course/tee optional, not required |
+| 10d | Live friend scoreboard | ⬜ | During `IN_PROGRESS` play: see friends’ hole-by-hole scores + running total; poll or SSE; respect privacy |
+| 10e | Friend leaderboards & comparisons | ⬜ | Rolling window (30d / season): best score, avg SG by category, rounds played; head-to-head vs one friend |
+| 10f | Activity feed & notifications | ⬜ | “Alex shot 82 at Kananaskis”; friend request; group invite; round finished; optional email/push (extends Phase 9) |
+| 10g | Privacy & visibility | ⬜ | Per-user defaults: who can find me, who sees rounds, who sees live play, who sees coach summary |
+| 10h | Social games (optional) | ⬜ | Match play holes won, Nassau auto-scoring, skins ledger — only after 10c–10d stable |
+
+### Data model (sketch)
+
+| Model | Purpose |
+|-------|---------|
+| `Friendship` | `userId`, `friendId`, `status`, `createdAt` |
+| `RoundShare` | Round shared to user or public link token; expiry optional |
+| `GroupRound` | Shared outing id, course, createdBy, status |
+| `GroupRoundMember` | `groupRoundId`, `userId`, `roundId?`, `role` (host / player) |
+| `ActivityEvent` | Denormalized feed: `type`, `actorId`, `payload`, `createdAt` |
+
+### Scope guards
+
+- **Coaching stays private by default** — Friends see scores and optional coach *headline*, not full chat thread unless user opts in.
+- **No public global leaderboard at launch** — Friends-only reduces spam and keeps focus on your group.
+- **Group round ≠ shared login** — Each player logs their own holes; AI coach remains per-user.
+- **Rate limits** — Friend requests and share links capped to prevent abuse.
+
+### Quick wins vs later
+
+| Order | Sub-phase | Effort | Payoff |
+|-------|-----------|--------|--------|
+| 1 | **10a** Friends + requests | Medium | Foundation for everything else |
+| 2 | **10b** Share round / coach card | Small–Medium | Viral + retention; ties to Phase 9 |
+| 3 | **10c** Linked group round | Medium | “We played together” without building games |
+| 4 | **10d** Live scoreboard | Medium | High delight on course; needs 10c + Phase 6 |
+| 5 | **10e–10f** Leaderboards + feed | Medium | Keeps people coming back between rounds |
+| 6 | **10h** Nassau / match play | Large | Nice-to-have; defer until core social is used |
+
+**Agent prompt (10a):** *Implement Phase 10a: friend graph, requests, and `/friends` UI. Read `docs/ROADMAP.md` Phase 10. Respect privacy defaults.*
 
 ---
 
@@ -236,10 +295,14 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | — | **8** Conversational caddie | Large | ✅ Done |
 | — | **2** Miss patterns | Medium | ✅ Done |
 | 2 | **4** Structured coach output + card UI | Medium | ✅ Done |
-| 3 | **5** Dashboard SG + practice focus | Medium | Value between rounds |
+| — | **5** Dashboard SG + practice focus | Medium | ✅ Done |
 | 4 | **3** Multi-round insights | Medium–Large | “It knows my game” moment |
 | 5 | **7b–7c** Turn / hole tips | Medium | True on-course caddie |
 | 6 | **9** Quick log + onboarding | Medium | More people complete first coach loop |
+| 7 | **10a–10b** Friends + share round | Medium | Social foundation + viral coach cards |
+| 8 | **10c–10d** Group round + live scores | Medium–Large | Play together on course |
+| 9 | **10e–10f** Leaderboards + activity feed | Medium | Retention between outings |
+| 10 | **10h** Social games (Nassau, etc.) | Large | Optional; after core social proves useful |
 
 ---
 
@@ -256,7 +319,10 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | `lib/coach/types.ts` | Phase 4 — `CoachAnalysis` schema + modes |
 | `lib/coach/analysis.ts` | Phase 4 — parse/serialize stored feedback |
 | `lib/golf-logic/miss-patterns.ts` | Phase 2 — segmented tendencies |
-| `lib/golf-logic/insights.ts` | Phase 3 — multi-round ranking |
+| `lib/golf-logic/insights.ts` | Phase 3/5 — `computePracticeFocus()`; full multi-round ranking TBD |
+| `components/SgChips.tsx` | Phase 5 — reusable SG chip row |
+| `components/PracticeFocusBanner.tsx` | Phase 5 — dashboard practice focus |
+| `components/MissPatternPreview.tsx` | Phase 5 — review-step SG + miss preview |
 | `lib/auth.ts` | Clerk → DB user resolution |
 | `app/api/coach/route.ts` | Post-round structured coach (`gpt-5-mini`, JSON `aiFeedback`) |
 | `app/api/coach/chat/route.ts` | Phase 8 — follow-up chat (`gpt-4o-mini`, persists `CoachMessage`) |
@@ -270,4 +336,10 @@ Also watch: 3 right OTT misses on par 4s > 400y
 | `components/PlayRoundClient.tsx` | Phase 7b–7c — on-course coach surfaces |
 | `components/AddRoundForm.tsx` | Post-round + hole-by-hole entry |
 | `docs/ON_COURSE_PLAY.md` | On-course play spec (Phase 6) |
+| `prisma/schema.prisma` | Phase 10 — `Friendship`, `GroupRound`, etc. (TBD) |
+| `app/friends/` | Phase 10a — friend list, requests, search |
+| `app/api/social/` | Phase 10 — friends, shares, group rounds, feed (TBD) |
+| `components/GroupRoundPicker.tsx` | Phase 10c — “Playing with…” at round start |
+| `components/LiveFriendScoreboard.tsx` | Phase 10d — in-play friend scores on `/play/[id]` |
+| `components/ShareRoundButton.tsx` | Phase 10b — share card + link |
 | `docs/ROADMAP.md` | This file |

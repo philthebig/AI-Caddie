@@ -6,6 +6,7 @@ import CourseSearch, { type CourseSearchSelection } from '@/components/CourseSea
 import HoleNavBar from '@/components/HoleNavBar'
 import HolePicker from '@/components/HolePicker'
 import HoleScoreCard from '@/components/HoleScoreCard'
+import MissPatternPreview from '@/components/MissPatternPreview'
 import ToggleGroup from '@/components/ToggleGroup'
 import {
   emptyHole,
@@ -562,6 +563,8 @@ export default function AddRoundForm({ edit }: AddRoundFormProps) {
                 <span className="font-bold">{activeHoles.filter((h) => h.gir).length}</span>
               </p>
             </div>
+
+            <MissPatternPreview holes={activeHoles} />
 
             <div className="rounded-lg border border-slate-200 p-3 bg-slate-50">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">

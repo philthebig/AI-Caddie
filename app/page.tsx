@@ -3,8 +3,11 @@ import { currentUser } from '@clerk/nextjs/server'
 import AddRoundForm from '@/components/AddRoundForm'
 import EmptyState from '@/components/EmptyState'
 import ResumeRoundBanner from '@/components/ResumeRoundBanner'
+import PracticeFocusBanner from '@/components/PracticeFocusBanner'
+import RecentRoundsHeading from '@/components/RecentRoundsHeading'
 import RoundCard from '@/components/RoundCard'
 import TrendsChart from '@/components/TrendsChart'
+import { computePracticeFocus } from '@/lib/golf-logic/insights'
 import { buildTrendSeries, computeTrendPoints } from '@/lib/golf-logic/trends'
 
 export default async function Home() {
@@ -43,6 +46,7 @@ export default async function Home() {
   const completedRounds = dbUser.rounds.filter((r) => r.status === 'COMPLETED')
   const trendPoints = computeTrendPoints(completedRounds)
   const trendSeries = buildTrendSeries(trendPoints)
+  const practiceFocus = computePracticeFocus(completedRounds)
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-8 font-sans text-slate-900 pb-24">
@@ -60,12 +64,14 @@ export default async function Home() {
 
         {inProgressRound && <ResumeRoundBanner round={inProgressRound} />}
 
+        {practiceFocus && <PracticeFocusBanner focus={practiceFocus} />}
+
         {completedRounds.length >= 1 && <TrendsChart series={trendSeries} />}
 
         <AddRoundForm />
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-800">Recent rounds</h2>
+          <RecentRoundsHeading />
           {completedRounds.length === 0 ? (
             <EmptyState
               icon="🏌️‍♂️"

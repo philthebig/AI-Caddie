@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import type { Hole, Round } from '@prisma/client'
+import SgChips from '@/components/SgChips'
 import { getCoachDisplaySummary } from '@/lib/coach/analysis'
+import { computeRoundStrokesGained } from '@/lib/golf-logic/strokes-gained'
 
 type RoundCardProps = {
   round: Round & { holes: Hole[] }
@@ -10,6 +12,7 @@ export default function RoundCard({ round }: RoundCardProps) {
   const holeCount = round.holes.length > 0 ? round.holes.length : round.holeCount
   const scoreVsPar =
     round.coursePar != null ? round.totalScore - round.coursePar : null
+  const sg = round.holes.length > 0 ? computeRoundStrokesGained(round.holes) : null
 
   return (
     <Link
@@ -61,6 +64,12 @@ export default function RoundCard({ round }: RoundCardProps) {
           <div className="font-bold text-slate-700">{holeCount}</div>
         </div>
       </div>
+
+      {sg && (
+        <div className="mt-3">
+          <SgChips sg={sg} showTotal={false} size="sm" />
+        </div>
+      )}
 
       {round.aiFeedback && (
         <p className="mt-3 text-sm text-indigo-700 line-clamp-2 leading-snug">

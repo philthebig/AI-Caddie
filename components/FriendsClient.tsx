@@ -110,8 +110,9 @@ export default function FriendsClient({ initialUsername }: { initialUsername: st
         throw new Error('Server error saving username. Refresh the page and try again.')
       }
       if (!res.ok) throw new Error(data.error ?? 'Could not save username')
-      setUsername(data.username)
-      setUsernameInput(data.username)
+      const saved = data.username ?? normalized
+      setUsername(saved)
+      setUsernameInput(saved)
     } catch (err) {
       setUsernameError(err instanceof Error ? err.message : 'Could not save username')
     } finally {

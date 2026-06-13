@@ -89,10 +89,12 @@ export async function POST(req: Request) {
 
   try {
     const { object: analysis } = await generateObject({
-      model: openai('gpt-5-mini'),
+      // Chat completions API — gpt-5 responses API often returns empty structured output.
+      model: openai.chat('gpt-4o-mini'),
       schema: coachAnalysisSchema,
       prompt,
       temperature: 0.7,
+      maxOutputTokens: 2000,
     })
 
     const serialized = serializeCoachFeedback(analysis, mode)

@@ -10,7 +10,8 @@ OUTPUT RULES (structured JSON):
 - strokesCost and primaryFocus.strokesCost must reflect the SG figures provided (round to one decimal).
 - evidenceHoles and primaryFocus.evidenceHoles must list specific hole numbers from the data (e.g. blow-up holes, repeated miss segments).
 - drill.id and drill.name MUST come from the APPROVED DRILLS list below — copy id and name exactly; adapt description briefly if needed.
-- secondaryFocus is optional — include only when a second clear pattern exists in the data.
+- secondaryFocus: set to null unless a second clear pattern exists in the data.
+- drill.duration: set to null if the chosen drill has no duration in the approved list.
 - encouragement: one short, genuine sentence — not generic fluff.
 `.trim()
 

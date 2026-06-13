@@ -111,7 +111,14 @@ export async function POST(req: Request) {
     const response: CoachResponseBody = { feedback, cached: false }
     return Response.json(response)
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
     console.error('Coach generation failed:', err)
-    return Response.json({ error: 'Failed to generate coach analysis' }, { status: 500 })
+    return Response.json(
+      {
+        error: 'Failed to generate coach analysis',
+        detail: process.env.NODE_ENV === 'development' ? message : undefined,
+      },
+      { status: 500 }
+    )
   }
 }

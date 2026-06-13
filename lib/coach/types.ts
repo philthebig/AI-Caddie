@@ -18,14 +18,14 @@ export const coachDrillSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  // OpenAI structured output rejects .optional(); use null when not applicable.
-  duration: z.string().nullable().default(null),
+  // Required but nullable — OpenAI strict JSON schema rejects .optional() and .default().
+  duration: z.string().nullable(),
 })
 
 export const coachAnalysisSchema = z.object({
   summary: z.string(),
   primaryFocus: coachFocusSchema,
-  secondaryFocus: coachFocusSchema.nullable().default(null),
+  secondaryFocus: coachFocusSchema.nullable(),
   strokesCost: z.number(),
   evidenceHoles: z.array(z.number().int().min(1).max(18)),
   drill: coachDrillSchema,

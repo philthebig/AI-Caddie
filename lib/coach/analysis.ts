@@ -34,7 +34,25 @@ export function parseStoredCoachFeedback(
       'analysis' in parsed
     ) {
       const result = parsed as StoredCoachFeedback
-      const validated = coachAnalysisSchema.safeParse(result.analysis)
+      const analysisInput =
+        typeof result.analysis === 'object' && result.analysis !== null
+          ? {
+              ...result.analysis,
+              secondaryFocus:
+                'secondaryFocus' in result.analysis ? result.analysis.secondaryFocus : null,
+              drill:
+                typeof result.analysis.drill === 'object' && result.analysis.drill !== null
+                  ? {
+                      ...result.analysis.drill,
+                      duration:
+                        'duration' in result.analysis.drill
+                          ? result.analysis.drill.duration
+                          : null,
+                    }
+                  : result.analysis.drill,
+            }
+          : result.analysis
+      const validated = coachAnalysisSchema.safeParse(analysisInput)
       if (validated.success) {
         return { ...result, analysis: validated.data }
       }
